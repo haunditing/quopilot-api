@@ -9,6 +9,7 @@ export type AgentEventType =
   | "CONVERSATION_ASSIGNED"
   | "CONVERSATION_RELEASED"
   | "CONVERSATION_CLOSED"
+  | "CONVERSATION_REOPENED"
   | "SUMMARY_REFRESHED"
   | "LLM_ERROR";
 
@@ -53,6 +54,7 @@ const agentEventSchema = new Schema<IAgentEvent>(
         "CONVERSATION_ASSIGNED",
         "CONVERSATION_RELEASED",
         "CONVERSATION_CLOSED",
+        "CONVERSATION_REOPENED",
         "SUMMARY_REFRESHED",
         "LLM_ERROR",
       ],

@@ -1,8 +1,10 @@
 import { Router } from "express";
 import {
+  claimConversationController,
   getConversationMessagesController,
   getConversationTypingController,
   listConversationsController,
+  reopenConversationController,
   replyToConversationController,
   setConversationTypingController,
 } from "../controllers/conversation-controller.js";
@@ -32,6 +34,22 @@ router.post(
   authorize("AGENT"),
   requireTenant,
   replyToConversationController,
+);
+
+router.post(
+  "/:conversationId/claim",
+  authenticate,
+  authorize("AGENT"),
+  requireTenant,
+  claimConversationController,
+);
+
+router.post(
+  "/:conversationId/reopen",
+  authenticate,
+  authorize("AGENT"),
+  requireTenant,
+  reopenConversationController,
 );
 
 router.get(

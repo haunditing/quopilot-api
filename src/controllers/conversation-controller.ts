@@ -1,9 +1,11 @@
 import type { Response } from "express";
 import type { AuthenticatedRequest } from "../middleware/auth-middleware.js";
 import {
+  claimConversationForAgent,
   getConversationTyping,
   listConversations,
   listMessages,
+  reopenConversation,
   replyToConversation,
   setConversationTyping,
 } from "../services/agent-conversation-service.js";
@@ -244,6 +246,94 @@ export async function replyToConversationController(
     res.status(201).json(outcome);
   } catch (error) {
     handleConversationError(res, error, "Unable to send reply");
+  }
+}
+
+export async function claimConversationController(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  const tenantId = req.user?.tenantId;
+  const userId = req.user?.id;
+
+  if (!tenantId || !userId) {
+    res.status(403).json({
+      message: "Tenant context required",
+    });
+
+    return;
+  }
+
+  const conversationId = req.params.conversationId;
+
+  if (typeof conversationId !== "string") {
+    res.status(400).json({
+      message: "Invalid conversationId",
+    });
+
+    return;
+  }
+
+  try {
+    const claimed = await claimConversationForAgent({
+      tenantId,
+      conversationId,
+      userId,
+    });
+
+    if (!claimed) {
+      res.status(409).json({
+        message:
+          "La conversación no está disponible. Puede que ya esté asignada o cerrada.",
+      });
+
+      return;
+    }
+
+    res.status(200).json({
+      claimed: true,
+    });
+  } catch (error) {
+    handleConversationError(res, error, "Unable to claim conversation");
+  }
+}
+
+export async function reopenConversationController(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  const tenantId = req.user?.tenantId;
+
+  if (!tenantId) {
+    res.status(403).json({
+      message: "Tenant context required",
+    });
+
+    return;
+  }
+
+  const conversationId = req.params.conversationId;
+
+  if (typeof conversationId !== "string") {
+    res.status(400).json({
+      message: "Invalid conversationId",
+    });
+
+    return;
+  }
+
+  try {
+    const conversation = await reopenConversation({
+      tenantId,
+      conversationId,
+      reopenedBy: "AGENT",
+    });
+
+    res.status(200).json({
+      conversation,
+    });
+  } catch (error) {
+    handleConversationError(res, error, "Unable to reopen conversation");
   }
 }
 

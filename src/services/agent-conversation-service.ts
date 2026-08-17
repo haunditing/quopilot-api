@@ -683,6 +683,61 @@ export async function assignConversationToNextAgent(input: {
   return agent;
 }
 
+export async function reopenConversation(input: {
+  tenantId: string;
+  conversationId: string;
+  reopenedBy: "AGENT" | "SYSTEM";
+}) {
+  const { tenantId, conversationId, reopenedBy } = input;
+
+  assertValidId(tenantId, "tenantId");
+  assertValidId(conversationId, "conversationId");
+
+  const conversation = await getConversation(tenantId, conversationId);
+
+  if (conversation.status !== "CLOSED") {
+    throw new Error("Conversation is open");
+  }
+
+  await Promise.all([
+    Conversation.updateOne(
+      {
+        _id: new Types.ObjectId(conversationId),
+        tenantId: new Types.ObjectId(tenantId),
+      },
+      {
+        $set: {
+          status: "OPEN",
+        },
+      },
+    ),
+
+    ConversationState.updateOne(
+      {
+        tenantId,
+        conversationId,
+      },
+      {
+        $unset: {
+          "context.pendingAction": "",
+        },
+      },
+    ),
+
+    AgentEvent.create({
+      tenantId,
+      conversationId,
+      customerId: conversation.customerId,
+      type: "CONVERSATION_REOPENED",
+      data: {
+        reopenedBy,
+      },
+    }),
+  ]);
+
+  return getConversation(tenantId, conversationId);
+}
+
 export async function claimConversationForAgent(input: {
   tenantId: string;
   conversationId: string;
