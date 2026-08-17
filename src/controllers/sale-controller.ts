@@ -123,6 +123,8 @@ export async function getSalesController(
 
     const dateTo = typeof dateToParam === "string" ? dateToParam : undefined;
 
+    const userId = req.user?.role === "AGENT" ? req.user.id : undefined;
+
     const result = await getSales({
       tenantId,
       page,
@@ -135,6 +137,7 @@ export async function getSalesController(
       maxTotal,
       dateFrom,
       dateTo,
+      userId,
     });
 
     res.status(200).json(result);

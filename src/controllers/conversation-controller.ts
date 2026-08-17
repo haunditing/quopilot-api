@@ -133,6 +133,8 @@ export async function listConversationsController(
   const channelId =
     typeof channelIdParam === "string" ? channelIdParam : undefined;
 
+  const userId = req.user?.role === "AGENT" ? req.user.id : undefined;
+
   try {
     const result = await listConversations({
       tenantId,
@@ -141,6 +143,7 @@ export async function listConversationsController(
       status,
       channel,
       channelId,
+      userId,
     });
 
     res.status(200).json(result);

@@ -1,5 +1,6 @@
 import { Types } from "mongoose";
 import { Customer } from "../models/Customer.js";
+import { Conversation } from "../models/Conversation.js";
 
 interface GetCustomersInput {
   tenantId: string;
@@ -7,10 +8,11 @@ interface GetCustomersInput {
   limit: number;
   search?: string;
   country?: string;
+  userId?: string;
 }
 
 export async function getCustomers(input: GetCustomersInput) {
-  const { tenantId, page, limit, search, country } = input;
+  const { tenantId, page, limit, search, country, userId } = input;
 
   if (!Types.ObjectId.isValid(tenantId)) {
     throw new Error("Invalid tenantId");
@@ -24,6 +26,19 @@ export async function getCustomers(input: GetCustomersInput) {
       $ne: true,
     },
   };
+
+  if (userId) {
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new Error("Invalid userId");
+    }
+
+    const customerIds = await Conversation.find({
+      tenantId: tenantObjectId,
+      assignedTo: new Types.ObjectId(userId),
+    }).distinct("customerId");
+
+    filter._id = { $in: customerIds };
+  }
 
   if (search?.trim()) {
     const searchRegex = new RegExp(search.trim(), "i");

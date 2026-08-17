@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import { Quote } from "../models/Quote.js";
 import { QuoteEvent } from "../models/QuoteEvent.js";
+import { Conversation } from "../models/Conversation.js";
 
 interface GetQuotesInput {
   tenantId: string;
@@ -9,10 +10,11 @@ interface GetQuotesInput {
   status?: string;
   customerId?: string;
   search?: string;
+  userId?: string;
 }
 
 export async function getQuotes(input: GetQuotesInput) {
-  const { tenantId, page, limit, status, customerId, search } = input;
+  const { tenantId, page, limit, status, customerId, search, userId } = input;
 
   if (!Types.ObjectId.isValid(tenantId)) {
     throw new Error("Invalid tenantId");
@@ -22,9 +24,24 @@ export async function getQuotes(input: GetQuotesInput) {
     throw new Error("Invalid customerId");
   }
 
+  const tenantObjectId = new Types.ObjectId(tenantId);
+
   const filter: Record<string, unknown> = {
-    tenantId: new Types.ObjectId(tenantId),
+    tenantId: tenantObjectId,
   };
+
+  if (userId) {
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new Error("Invalid userId");
+    }
+
+    const customerIds = await Conversation.find({
+      tenantId: tenantObjectId,
+      assignedTo: new Types.ObjectId(userId),
+    }).distinct("customerId");
+
+    filter.customerId = { $in: customerIds };
+  }
 
   if (status) {
     filter.status = status;
@@ -100,12 +117,11 @@ export async function getQuoteStatus(tenantId: string, quoteId: string) {
     subtotal: quote.subtotal,
     total: quote.total,
     currency: quote.currency,
-    validUntil: quote.validUntil,
-    sentAt: quote.sentAt,
-    viewedAt: quote.viewedAt,
-    acceptedAt: quote.acceptedAt,
-    rejectedAt: quote.rejectedAt,
-    lastEventType: lastEvent?.type,
-    lastEventAt: lastEvent?.createdAt,
+    lastEvent: lastEvent
+      ? {
+          type: lastEvent.type,
+          createdAt: lastEvent.createdAt,
+        }
+      : null,
   };
 }

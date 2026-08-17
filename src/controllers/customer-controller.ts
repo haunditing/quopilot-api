@@ -83,12 +83,15 @@ export async function getCustomersController(
     const country =
       typeof countryParam === "string" ? countryParam : undefined;
 
+    const userId = req.user?.role === "AGENT" ? req.user.id : undefined;
+
     const result = await getCustomers({
       tenantId,
       page,
       limit,
       search,
       country,
+      userId,
     });
 
     res.status(200).json(result);

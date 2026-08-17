@@ -14,7 +14,10 @@ export async function getAgentDashboardController(
       return;
     }
 
-    const summary = await getAgentDashboardSummary(req.user.tenantId);
+    const summary = await getAgentDashboardSummary(
+      req.user.tenantId,
+      req.user.id,
+    );
 
     res.status(200).json(summary);
   } catch (error) {

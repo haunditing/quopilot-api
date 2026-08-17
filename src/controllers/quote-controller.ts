@@ -298,6 +298,8 @@ export async function getQuotesController(
 
     const search = typeof searchParam === "string" ? searchParam : undefined;
 
+    const userId = req.user?.role === "AGENT" ? req.user.id : undefined;
+
     const result = await getQuotes({
       tenantId,
       page,
@@ -305,6 +307,7 @@ export async function getQuotesController(
       status,
       customerId,
       search,
+      userId,
     });
 
     res.status(200).json(result);

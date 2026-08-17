@@ -127,16 +127,22 @@ interface ListConversationsInput {
   status?: "OPEN" | "CLOSED";
   channelId?: string;
   channel?: ConversationChannel;
+  userId?: string;
 }
 
 export async function listConversations(input: ListConversationsInput) {
-  const { tenantId, page, limit, status, channelId, channel } = input;
+  const { tenantId, page, limit, status, channelId, channel, userId } = input;
 
   assertValidId(tenantId, "tenantId");
 
   const filter: Record<string, unknown> = {
     tenantId,
   };
+
+  if (userId) {
+    assertValidId(userId, "userId");
+    filter.assignedTo = new Types.ObjectId(userId);
+  }
 
   if (status) {
     filter.status = status;

@@ -2,6 +2,7 @@ import { Types } from "mongoose";
 import { Customer } from "../models/Customer.js";
 import { Quote } from "../models/Quote.js";
 import { Sale } from "../models/Sale.js";
+import { Conversation } from "../models/Conversation.js";
 
 interface GetSalesInput {
   tenantId: string;
@@ -15,6 +16,7 @@ interface GetSalesInput {
   maxTotal?: number;
   dateFrom?: string;
   dateTo?: string;
+  userId?: string;
 }
 
 export async function getSales(input: GetSalesInput) {
@@ -30,6 +32,7 @@ export async function getSales(input: GetSalesInput) {
     maxTotal,
     dateFrom,
     dateTo,
+    userId,
   } = input;
 
   if (!Types.ObjectId.isValid(tenantId)) {
@@ -49,6 +52,19 @@ export async function getSales(input: GetSalesInput) {
   const filter: Record<string, unknown> = {
     tenantId: tenantObjectId,
   };
+
+  if (userId) {
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new Error("Invalid userId");
+    }
+
+    const customerIds = await Conversation.find({
+      tenantId: tenantObjectId,
+      assignedTo: new Types.ObjectId(userId),
+    }).distinct("customerId");
+
+    filter.customerId = { $in: customerIds };
+  }
 
   if (status) {
     filter.status = status;

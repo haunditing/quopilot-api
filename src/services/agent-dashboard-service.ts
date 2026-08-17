@@ -2,13 +2,36 @@ import { Types } from "mongoose";
 import { Quote } from "../models/Quote.js";
 import { Sale } from "../models/Sale.js";
 import { Customer } from "../models/Customer.js";
+import { Conversation } from "../models/Conversation.js";
 
-export async function getAgentDashboardSummary(tenantId: string) {
+export async function getAgentDashboardSummary(tenantId: string, userId?: string) {
   if (!Types.ObjectId.isValid(tenantId)) {
     throw new Error("Invalid tenantId");
   }
 
   const tenantObjectId = new Types.ObjectId(tenantId);
+  const userObjectId =
+    userId && Types.ObjectId.isValid(userId) ? new Types.ObjectId(userId) : null;
+
+  let customerIds: Types.ObjectId[] = [];
+  if (userObjectId) {
+    customerIds = await Conversation.find({
+      tenantId: tenantObjectId,
+      assignedTo: userObjectId,
+    }).distinct("customerId");
+  }
+
+  const customerMatch = userObjectId
+    ? { tenantId: tenantObjectId, customerId: { $in: customerIds } }
+    : { tenantId: tenantObjectId };
+
+  const customerDocMatch = userObjectId
+    ? {
+        tenantId: tenantObjectId,
+        _id: { $in: customerIds },
+        isLead: { $ne: true },
+      }
+    : { tenantId: tenantObjectId, isLead: { $ne: true } };
 
   const [
     totalQuotes,
@@ -18,31 +41,29 @@ export async function getAgentDashboardSummary(tenantId: string) {
     salesAmount,
     totalCustomers,
   ] = await Promise.all([
-    Quote.countDocuments({
-      tenantId: tenantObjectId,
-    }),
+    Quote.countDocuments(customerMatch),
 
     Quote.countDocuments({
-      tenantId: tenantObjectId,
+      ...customerMatch,
       status: {
         $in: ["DRAFT", "SENT", "VIEWED"],
       },
     }),
 
     Quote.countDocuments({
-      tenantId: tenantObjectId,
+      ...customerMatch,
       status: "ACCEPTED",
     }),
 
     Sale.countDocuments({
-      tenantId: tenantObjectId,
+      ...customerMatch,
       status: "CONFIRMED",
     }),
 
     Sale.aggregate([
       {
         $match: {
-          tenantId: tenantObjectId,
+          ...customerMatch,
           status: "CONFIRMED",
         },
       },
@@ -56,12 +77,7 @@ export async function getAgentDashboardSummary(tenantId: string) {
       },
     ]),
 
-    Customer.countDocuments({
-      tenantId: tenantObjectId,
-      isLead: {
-        $ne: true,
-      },
-    }),
+    Customer.countDocuments(customerDocMatch),
   ]);
 
   const amount = salesAmount.length > 0 ? salesAmount[0].total : 0;
