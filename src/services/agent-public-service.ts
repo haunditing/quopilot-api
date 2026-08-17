@@ -37,6 +37,12 @@ function renderGreeting(template: string, customerName: string): string {
     .trim();
 }
 
+function sanitizeContent(content: string): string {
+  return content
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+    .trim();
+}
+
 async function seedGreetingMessage(input: {
   tenantId: string;
   conversationId: string;
@@ -214,25 +220,39 @@ export async function startPublicChat(input: StartPublicChatInput) {
 export async function getPublicMessages(input: {
   tenantId: string;
   conversationId: string;
+  customerId: string;
 }) {
-  const { tenantId, conversationId } = input;
+  const { tenantId, conversationId, customerId } = input;
 
   await getConversation(tenantId, conversationId);
 
-  return listMessages(tenantId, conversationId);
+  const messages = await listMessages(tenantId, conversationId);
+
+  return messages.filter(
+    (message) =>
+      message.customerId?.toString() === customerId ||
+      message.senderType !== "CUSTOMER",
+  );
 }
 
 export async function sendPublicMessage(input: {
   tenantId: string;
   conversationId: string;
+  customerId: string;
   content: string;
 }) {
   const { tenantId, conversationId, content } = input;
 
+  const cleanContent = sanitizeContent(content);
+
+  if (!cleanContent) {
+    throw new Error("Message is empty");
+  }
+
   return processInboundMessage({
     tenantId,
     conversationId,
-    content,
+    content: cleanContent,
   });
 }
 

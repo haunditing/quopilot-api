@@ -66,6 +66,14 @@ function handlePublicError(
     return;
   }
 
+  if (message === "Message is empty") {
+    res.status(400).json({
+      message,
+    });
+
+    return;
+  }
+
   console.error(error);
 
   res.status(500).json({
@@ -74,6 +82,12 @@ function handlePublicError(
 }
 
 function readChatToken(req: AuthenticatedRequest): string | null {
+  const header = req.header("x-chat-token");
+
+  if (header) {
+    return header;
+  }
+
   const raw = req.query.token;
 
   return typeof raw === "string" && raw ? raw : null;
@@ -94,7 +108,13 @@ function verifyChatToken(
   }
 
   try {
-    return verifyPublicChatToken(token);
+    const payload = verifyPublicChatToken(token);
+
+    if (payload.scope !== "public-chat") {
+      throw new Error("Invalid token scope");
+    }
+
+    return payload;
   } catch {
     res.status(401).json({
       message: "Invalid or expired chat token",
@@ -102,6 +122,33 @@ function verifyChatToken(
 
     return null;
   }
+}
+
+function authorizeChatAccess(
+  req: AuthenticatedRequest,
+  res: Response,
+): PublicChatTokenPayload | null {
+  const tenantId = String(req.params.tenantId ?? "");
+  const conversationId = String(req.params.conversationId ?? "");
+
+  const payload = verifyChatToken(req, res);
+
+  if (!payload) {
+    return null;
+  }
+
+  if (
+    payload.tenantId !== tenantId ||
+    payload.conversationId !== conversationId
+  ) {
+    res.status(403).json({
+      message: "Chat token does not match conversation",
+    });
+
+    return null;
+  }
+
+  return payload;
 }
 
 export async function getPublicChatConfigController(
@@ -155,20 +202,9 @@ export async function listPublicMessagesController(
   const tenantId = String(req.params.tenantId ?? "");
   const conversationId = String(req.params.conversationId ?? "");
 
-  const payload = verifyChatToken(req, res);
+  const payload = authorizeChatAccess(req, res);
 
   if (!payload) {
-    return;
-  }
-
-  if (
-    payload.tenantId !== tenantId ||
-    payload.conversationId !== conversationId
-  ) {
-    res.status(403).json({
-      message: "Chat token does not match conversation",
-    });
-
     return;
   }
 
@@ -176,6 +212,7 @@ export async function listPublicMessagesController(
     const messages = await getPublicMessages({
       tenantId,
       conversationId,
+      customerId: payload.customerId,
     });
 
     res.status(200).json(messages);
@@ -191,20 +228,9 @@ export async function sendPublicMessageController(
   const tenantId = String(req.params.tenantId ?? "");
   const conversationId = String(req.params.conversationId ?? "");
 
-  const payload = verifyChatToken(req, res);
+  const payload = authorizeChatAccess(req, res);
 
   if (!payload) {
-    return;
-  }
-
-  if (
-    payload.tenantId !== tenantId ||
-    payload.conversationId !== conversationId
-  ) {
-    res.status(403).json({
-      message: "Chat token does not match conversation",
-    });
-
     return;
   }
 
@@ -223,6 +249,7 @@ export async function sendPublicMessageController(
     const outcome = await sendPublicMessage({
       tenantId,
       conversationId,
+      customerId: payload.customerId,
       content: result.data.content,
     });
 
@@ -239,20 +266,9 @@ export async function getPublicTypingController(
   const tenantId = String(req.params.tenantId ?? "");
   const conversationId = String(req.params.conversationId ?? "");
 
-  const payload = verifyChatToken(req, res);
+  const payload = authorizeChatAccess(req, res);
 
   if (!payload) {
-    return;
-  }
-
-  if (
-    payload.tenantId !== tenantId ||
-    payload.conversationId !== conversationId
-  ) {
-    res.status(403).json({
-      message: "Chat token does not match conversation",
-    });
-
     return;
   }
 
@@ -275,20 +291,9 @@ export async function setPublicTypingController(
   const tenantId = String(req.params.tenantId ?? "");
   const conversationId = String(req.params.conversationId ?? "");
 
-  const payload = verifyChatToken(req, res);
+  const payload = authorizeChatAccess(req, res);
 
   if (!payload) {
-    return;
-  }
-
-  if (
-    payload.tenantId !== tenantId ||
-    payload.conversationId !== conversationId
-  ) {
-    res.status(403).json({
-      message: "Chat token does not match conversation",
-    });
-
     return;
   }
 
@@ -323,20 +328,9 @@ export async function closePublicChatController(
   const tenantId = String(req.params.tenantId ?? "");
   const conversationId = String(req.params.conversationId ?? "");
 
-  const payload = verifyChatToken(req, res);
+  const payload = authorizeChatAccess(req, res);
 
   if (!payload) {
-    return;
-  }
-
-  if (
-    payload.tenantId !== tenantId ||
-    payload.conversationId !== conversationId
-  ) {
-    res.status(403).json({
-      message: "Chat token does not match conversation",
-    });
-
     return;
   }
 
