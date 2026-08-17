@@ -5,6 +5,7 @@ import {
   acceptQuoteController,
   updateQuoteController,
   getQuotesController,
+  getNextQuoteNumberController,
 } from "../controllers/quote-controller.js";
 import { authenticate } from "../middleware/auth-middleware.js";
 import { requireTenant } from "../middleware/tenant-middleware.js";
@@ -26,6 +27,12 @@ router.post(
 );
 
 router.get("/", authenticate, requireTenant, getQuotesController);
+router.get(
+  "/next-number",
+  authenticate,
+  requireTenant,
+  getNextQuoteNumberController,
+);
 router.get("/:quoteId", authenticate, requireTenant, getQuoteByIdController);
 
 export default router;

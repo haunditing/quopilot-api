@@ -6,9 +6,11 @@ export interface ITenant extends Document {
   taxId?: string;
   email?: string;
   phone?: string;
+  address?: string;
   country?: string;
   currency: string;
   timezone: string;
+  logoUrl?: string;
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
   createdAt: Date;
   updatedAt: Date;
@@ -43,6 +45,11 @@ const tenantSchema = new Schema<ITenant>(
       trim: true,
     },
 
+    address: {
+      type: String,
+      trim: true,
+    },
+
     country: {
       type: String,
       trim: true,
@@ -58,6 +65,11 @@ const tenantSchema = new Schema<ITenant>(
       type: String,
       required: true,
       default: "America/Bogota",
+    },
+
+    logoUrl: {
+      type: String,
+      trim: true,
     },
 
     status: {

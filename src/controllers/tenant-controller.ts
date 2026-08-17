@@ -177,6 +177,29 @@ export async function getTenantUsersController(
   }
 }
 
+export async function getCurrentTenantController(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  try {
+    const tenantId = req.user?.tenantId;
+
+    if (!tenantId) {
+      res.status(403).json({
+        message: "Tenant context required",
+      });
+
+      return;
+    }
+
+    const tenant = await getTenantById(tenantId);
+
+    res.status(200).json(tenant);
+  } catch (error) {
+    handleTenantError(res, error, "Unable to load tenant");
+  }
+}
+
 export async function createTenantController(
   req: AuthenticatedRequest,
   res: Response,

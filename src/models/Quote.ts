@@ -11,9 +11,14 @@ export type QuoteStatus =
 export interface IQuoteItem {
   productId: Types.ObjectId;
   name: string;
+  description?: string;
   quantity: number;
   unitPrice: number;
+  discountPercent: number;
+  taxRate: number;
   subtotal: number;
+  taxAmount: number;
+  totalLine: number;
 }
 
 export interface IQuote extends Document {
@@ -21,17 +26,23 @@ export interface IQuote extends Document {
   customerId: Types.ObjectId;
   conversationId?: Types.ObjectId;
 
+  documentType: "QUOTE";
   number: string;
 
   items: IQuoteItem[];
 
   subtotal: number;
+  totalDiscount: number;
+  totalTax: number;
   total: number;
   currency: string;
 
   status: QuoteStatus;
 
   validUntil?: Date;
+
+  notes?: string;
+  terms?: string;
 
   sentAt?: Date;
   viewedAt?: Date;
@@ -56,6 +67,11 @@ const quoteItemSchema = new Schema<IQuoteItem>(
       trim: true,
     },
 
+    description: {
+      type: String,
+      trim: true,
+    },
+
     quantity: {
       type: Number,
       required: true,
@@ -68,7 +84,35 @@ const quoteItemSchema = new Schema<IQuoteItem>(
       min: 0,
     },
 
+    discountPercent: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
+
+    taxRate: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
+    },
+
     subtotal: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    taxAmount: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
+    },
+
+    totalLine: {
       type: Number,
       required: true,
       min: 0,
@@ -100,6 +144,13 @@ const quoteSchema = new Schema<IQuote>(
       ref: "Conversation",
     },
 
+    documentType: {
+      type: String,
+      enum: ["QUOTE"],
+      default: "QUOTE",
+      required: true,
+    },
+
     number: {
       type: String,
       required: true,
@@ -118,6 +169,20 @@ const quoteSchema = new Schema<IQuote>(
     subtotal: {
       type: Number,
       required: true,
+      min: 0,
+    },
+
+    totalDiscount: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
+    },
+
+    totalTax: {
+      type: Number,
+      required: true,
+      default: 0,
       min: 0,
     },
 
@@ -141,6 +206,16 @@ const quoteSchema = new Schema<IQuote>(
 
     validUntil: {
       type: Date,
+    },
+
+    notes: {
+      type: String,
+      trim: true,
+    },
+
+    terms: {
+      type: String,
+      trim: true,
     },
 
     sentAt: {

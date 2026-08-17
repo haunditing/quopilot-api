@@ -246,16 +246,16 @@ export const createQuoteTool: AgentTool = {
     }
 
     try {
-      const quote = await createQuote({
-        tenantId: ctx.tenantId,
-        customerId,
-        conversationId: ctx.conversationId,
-        items,
-        validUntil:
-          typeof args.validUntil === "string"
-            ? new Date(args.validUntil)
-            : undefined,
-      });
+      const quote = await createQuote(
+        {
+          customerId,
+          conversationId: ctx.conversationId,
+          items,
+          validUntil:
+            typeof args.validUntil === "string" ? args.validUntil : undefined,
+        },
+        ctx.tenantId,
+      );
 
       await linkQuoteDraftToConversation(
         ctx.tenantId,
@@ -339,9 +339,7 @@ export const updateQuoteTool: AgentTool = {
         customerId: ctx.customerId,
         items,
         validUntil:
-          typeof args.validUntil === "string"
-            ? new Date(args.validUntil)
-            : undefined,
+          typeof args.validUntil === "string" ? args.validUntil : undefined,
       });
 
       return okResult(compactQuote(quote));

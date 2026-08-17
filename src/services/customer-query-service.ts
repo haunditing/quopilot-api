@@ -11,6 +11,27 @@ interface GetCustomersInput {
   userId?: string;
 }
 
+export async function getCustomerById(tenantId: string, customerId: string) {
+  if (!Types.ObjectId.isValid(tenantId)) {
+    throw new Error("Invalid tenantId");
+  }
+
+  if (!Types.ObjectId.isValid(customerId)) {
+    throw new Error("Invalid customerId");
+  }
+
+  const customer = await Customer.findOne({
+    _id: new Types.ObjectId(customerId),
+    tenantId: new Types.ObjectId(tenantId),
+  }).lean();
+
+  if (!customer) {
+    throw new Error("Customer not found");
+  }
+
+  return customer;
+}
+
 export async function getCustomers(input: GetCustomersInput) {
   const { tenantId, page, limit, search, country, userId } = input;
 

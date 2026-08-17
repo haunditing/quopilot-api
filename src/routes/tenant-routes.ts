@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth-middleware.js";
 import { authorize } from "../middleware/authorize.js";
+import { requireTenant } from "../middleware/tenant-middleware.js";
 import {
   createTenantController,
+  getCurrentTenantController,
   getTenantController,
   getTenantsController,
   getTenantUsersController,
@@ -11,6 +13,8 @@ import {
 } from "../controllers/tenant-controller.js";
 
 const router = Router();
+
+router.get("/me", authenticate, requireTenant, getCurrentTenantController);
 
 router.use(authenticate, authorize("SUPER_ADMIN"));
 

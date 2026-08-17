@@ -9,7 +9,10 @@ import {
   deleteCustomer,
   updateCustomer,
 } from "../services/customer-service.js";
-import { getCustomers } from "../services/customer-query-service.js";
+import {
+  getCustomerById,
+  getCustomers,
+} from "../services/customer-query-service.js";
 
 function handleCustomerError(
   res: Response,
@@ -111,6 +114,37 @@ export async function getCustomersController(
     res.status(500).json({
       message: "Unable to load customers",
     });
+  }
+}
+
+export async function getCustomerController(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  try {
+    const tenantId = req.user?.tenantId;
+
+    if (!tenantId) {
+      res.status(403).json({
+        message: "Tenant context required",
+      });
+      return;
+    }
+
+    const customerId = req.params.customerId;
+
+    if (typeof customerId !== "string") {
+      res.status(400).json({
+        message: "Invalid customerId",
+      });
+      return;
+    }
+
+    const customer = await getCustomerById(tenantId, customerId);
+
+    res.status(200).json(customer);
+  } catch (error) {
+    handleCustomerError(res, error, "Unable to load customer");
   }
 }
 

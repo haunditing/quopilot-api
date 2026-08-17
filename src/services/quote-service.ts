@@ -2,27 +2,80 @@ import mongoose, { Types } from "mongoose";
 import { Customer } from "../models/Customer.js";
 import { Product } from "../models/Product.js";
 import { Quote } from "../models/Quote.js";
-import type { IQuote } from "../models/Quote.js";
-import { getNextSequence } from "./sequence-service.js";
+import type { IQuote, IQuoteItem } from "../models/Quote.js";
+
 import { createQuoteEvent } from "./quote-event-service.js";
+import { getNextSequence } from "./sequence-service.js";
+
+function round(value: number): number {
+  return Number(value.toFixed(2));
+}
+
+function buildQuoteItem(
+  item: CreateQuoteItemInput,
+  product: {
+    _id: Types.ObjectId;
+    name: string;
+    description?: string;
+    unitPrice: number;
+  },
+): IQuoteItem {
+  const quantity = item.quantity;
+  const unitPrice = item.unitPrice ?? product.unitPrice;
+  const discountPercent = item.discountPercent ?? 0;
+  const taxRate = item.taxRate ?? 0;
+
+  const grossSubtotal = unitPrice * quantity;
+  const discountAmount = grossSubtotal * (discountPercent / 100);
+  const subtotal = grossSubtotal - discountAmount;
+  const taxAmount = subtotal * taxRate;
+  const totalLine = subtotal + taxAmount;
+
+  return {
+    productId: product._id,
+    name: product.name,
+    description: product.description,
+    quantity,
+    unitPrice,
+    discountPercent,
+    taxRate,
+    subtotal: round(subtotal),
+    taxAmount: round(taxAmount),
+    totalLine: round(totalLine),
+  };
+}
 
 interface CreateQuoteItemInput {
   productId: string;
   quantity: number;
+  unitPrice?: number;
+  discountPercent?: number;
+  taxRate?: number;
 }
 
 interface CreateQuoteInput {
-  tenantId: string;
   customerId: string;
   conversationId?: string;
   items: CreateQuoteItemInput[];
-  validUntil?: Date;
+  validUntil?: string;
+  notes?: string;
+  terms?: string;
 }
 
 export async function createQuote(
   input: CreateQuoteInput,
+  tenantId: string,
 ): Promise<IQuote> {
-  const { tenantId, customerId, conversationId, items, validUntil } = input;
+  const {
+    customerId,
+    conversationId,
+    items,
+    validUntil,
+    notes,
+    terms,
+  } = input;
+
+  const validUntilDate = validUntil ? new Date(validUntil) : undefined;
 
   if (!Types.ObjectId.isValid(tenantId)) {
     throw new Error("Invalid tenantId");
@@ -53,18 +106,14 @@ export async function createQuote(
 
       if (customer.isLead) {
         customer.isLead = false;
-
         await customer.save({ session });
       }
 
       const productIds = items.map((item) => item.productId);
-
       const uniqueProductIds = [...new Set(productIds)];
 
       const products = await Product.find({
-        _id: {
-          $in: uniqueProductIds,
-        },
+        _id: { $in: uniqueProductIds },
         tenantId,
         status: "ACTIVE",
       }).session(session);
@@ -82,28 +131,36 @@ export async function createQuote(
           throw new Error(`Product not found: ${item.productId}`);
         }
 
-        if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
-          throw new Error(`Invalid quantity for product: ${product.name}`);
-        }
-
-        const subtotal = product.unitPrice * item.quantity;
-
-        return {
-          productId: product._id,
+        return buildQuoteItem(item, {
+          _id: product._id,
           name: product.name,
-          quantity: item.quantity,
+          description: product.description,
           unitPrice: product.unitPrice,
-          subtotal,
-        };
+        });
       });
 
       const subtotal = quoteItems.reduce(
-        (total, item) => total + item.subtotal,
+        (total, item) => total + item.unitPrice * item.quantity,
+        0,
+      );
+
+      const totalDiscount = quoteItems.reduce(
+        (total, item) =>
+          total + item.unitPrice * item.quantity * (item.discountPercent / 100),
+        0,
+      );
+
+      const totalTax = quoteItems.reduce(
+        (total, item) => total + item.taxAmount,
+        0,
+      );
+
+      const total = quoteItems.reduce(
+        (sum, item) => sum + item.totalLine,
         0,
       );
 
       const sequence = await getNextSequence(tenantId, "QUOTE", session);
-
       const quoteNumber = `Q-${String(sequence).padStart(6, "0")}`;
 
       const [quote] = await Quote.create(
@@ -112,18 +169,21 @@ export async function createQuote(
             tenantId,
             customerId,
             conversationId,
+            documentType: "QUOTE",
             number: quoteNumber,
             items: quoteItems,
-            subtotal,
-            total: subtotal,
+            subtotal: round(subtotal),
+            totalDiscount: round(totalDiscount),
+            totalTax: round(totalTax),
+            total: round(total),
             currency: products[0].currency,
             status: "DRAFT",
-            validUntil,
+            validUntil: validUntilDate,
+            notes,
+            terms,
           },
         ],
-        {
-          session,
-        },
+        { session },
       );
 
       await createQuoteEvent({
@@ -149,7 +209,9 @@ export async function createQuote(
 interface UpdateQuoteInput {
   customerId: string;
   items: CreateQuoteItemInput[];
-  validUntil?: Date;
+  validUntil?: string;
+  notes?: string;
+  terms?: string;
 }
 
 export async function updateQuote(
@@ -157,7 +219,9 @@ export async function updateQuote(
   quoteId: string,
   input: UpdateQuoteInput,
 ): Promise<IQuote> {
-  const { customerId, items, validUntil } = input;
+  const { customerId, items, validUntil, notes, terms } = input;
+
+  const validUntilDate = validUntil ? new Date(validUntil) : undefined;
 
   if (!Types.ObjectId.isValid(tenantId)) {
     throw new Error("Invalid tenantId");
@@ -205,18 +269,14 @@ export async function updateQuote(
 
       if (customer.isLead) {
         customer.isLead = false;
-
         await customer.save({ session });
       }
 
       const productIds = items.map((item) => item.productId);
-
       const uniqueProductIds = [...new Set(productIds)];
 
       const products = await Product.find({
-        _id: {
-          $in: uniqueProductIds,
-        },
+        _id: { $in: uniqueProductIds },
         tenantId,
         status: "ACTIVE",
       }).session(session);
@@ -234,36 +294,47 @@ export async function updateQuote(
           throw new Error(`Product not found: ${item.productId}`);
         }
 
-        if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
-          throw new Error(`Invalid quantity for product: ${product.name}`);
-        }
-
-        const subtotal = product.unitPrice * item.quantity;
-
-        return {
-          productId: product._id,
+        return buildQuoteItem(item, {
+          _id: product._id,
           name: product.name,
-          quantity: item.quantity,
+          description: product.description,
           unitPrice: product.unitPrice,
-          subtotal,
-        };
+        });
       });
 
       const subtotal = quoteItems.reduce(
-        (total, item) => total + item.subtotal,
+        (total, item) => total + item.unitPrice * item.quantity,
+        0,
+      );
+
+      const totalDiscount = quoteItems.reduce(
+        (total, item) =>
+          total + item.unitPrice * item.quantity * (item.discountPercent / 100),
+        0,
+      );
+
+      const totalTax = quoteItems.reduce(
+        (total, item) => total + item.taxAmount,
+        0,
+      );
+
+      const total = quoteItems.reduce(
+        (sum, item) => sum + item.totalLine,
         0,
       );
 
       quote.customerId = new Types.ObjectId(customerId);
       quote.items = quoteItems;
-      quote.subtotal = subtotal;
-      quote.total = subtotal;
+      quote.subtotal = round(subtotal);
+      quote.totalDiscount = round(totalDiscount);
+      quote.totalTax = round(totalTax);
+      quote.total = round(total);
       quote.currency = products[0].currency;
-      quote.validUntil = validUntil ?? undefined;
+      quote.validUntil = validUntilDate;
+      quote.notes = notes ?? undefined;
+      quote.terms = terms ?? undefined;
 
-      await quote.save({
-        session,
-      });
+      await quote.save({ session });
 
       updatedQuote = quote;
     });

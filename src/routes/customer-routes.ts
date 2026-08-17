@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   createCustomerController,
   deleteCustomerController,
+  getCustomerController,
   getCustomersController,
   updateCustomerController,
 } from "../controllers/customer-controller.js";
@@ -13,10 +14,12 @@ const router = Router();
 
 router.get("/", authenticate, requireTenant, getCustomersController);
 
+router.get("/:customerId", authenticate, requireTenant, getCustomerController);
+
 router.post(
   "/",
   authenticate,
-  authorize("TENANT_ADMIN"),
+  authorize("TENANT_ADMIN", "AGENT"),
   requireTenant,
   createCustomerController,
 );

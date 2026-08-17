@@ -1,13 +1,15 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../middleware/auth-middleware.js";
 import {
-  createQuote,
-  updateQuote,
-} from "../services/quote-service.js";
+  createQuoteSchema,
+  updateQuoteSchema,
+} from "../schemas/quote-schema.js";
 import { acceptQuote } from "../services/quote-acceptance-service.js";
-import { sendQuote } from "../services/quote-delivery-service.js";
-import { getQuotes } from "../services/quote-query-service.js";
+import { createQuote, updateQuote } from "../services/quote-service.js";
 import { getQuoteById } from "../services/quote-detail-service.js";
+import { getNextQuoteNumber } from "../services/quote-number-service.js";
+import { getQuotes } from "../services/quote-query-service.js";
+import { sendQuote } from "../services/quote-delivery-service.js";
 
 export async function createQuoteController(
   req: AuthenticatedRequest,
@@ -23,22 +25,17 @@ export async function createQuoteController(
       return;
     }
 
-    const { customerId, conversationId, items, validUntil } = req.body;
+    const parseResult = createQuoteSchema.safeParse(req.body);
 
-    if (typeof customerId !== "string" || !Array.isArray(items)) {
+    if (!parseResult.success) {
       res.status(400).json({
-        message: "customerId and items are required",
+        message: "Invalid quote data",
+        errors: parseResult.error.flatten(),
       });
       return;
     }
 
-    const quote = await createQuote({
-      tenantId,
-      customerId,
-      conversationId,
-      items,
-      validUntil: validUntil ? new Date(validUntil) : undefined,
-    });
+    const quote = await createQuote(parseResult.data, tenantId);
 
     res.status(201).json({
       quote,
@@ -52,6 +49,17 @@ export async function createQuoteController(
       message === "One or more products are invalid"
     ) {
       res.status(404).json({
+        message,
+      });
+      return;
+    }
+
+    if (
+      message === "Invalid tenantId" ||
+      message === "Invalid customerId" ||
+      message === "Quote must contain at least one item"
+    ) {
+      res.status(400).json({
         message,
       });
       return;
@@ -88,20 +96,17 @@ export async function updateQuoteController(
       return;
     }
 
-    const { customerId, items, validUntil } = req.body;
+    const parseResult = updateQuoteSchema.safeParse(req.body);
 
-    if (typeof customerId !== "string" || !Array.isArray(items)) {
+    if (!parseResult.success) {
       res.status(400).json({
-        message: "customerId and items are required",
+        message: "Invalid quote data",
+        errors: parseResult.error.flatten(),
       });
       return;
     }
 
-    const quote = await updateQuote(tenantId, quoteId, {
-      customerId,
-      items,
-      validUntil: validUntil ? new Date(validUntil) : undefined,
-    });
+    const quote = await updateQuote(tenantId, quoteId, parseResult.data);
 
     res.status(200).json({
       quote,
@@ -378,6 +383,42 @@ export async function getQuoteByIdController(
 
     res.status(500).json({
       message: "Unable to load quote",
+    });
+  }
+}
+
+export async function getNextQuoteNumberController(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  try {
+    const tenantId = req.user?.tenantId;
+
+    if (!tenantId) {
+      res.status(403).json({
+        message: "Tenant context required",
+      });
+      return;
+    }
+
+    const number = await getNextQuoteNumber(tenantId);
+
+    res.status(200).json({ number });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unable to load next number";
+
+    if (message === "Invalid tenantId") {
+      res.status(400).json({
+        message,
+      });
+      return;
+    }
+
+    console.error(error);
+
+    res.status(500).json({
+      message: "Unable to load next number",
     });
   }
 }
