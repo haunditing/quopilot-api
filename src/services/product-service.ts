@@ -32,7 +32,9 @@ export async function createProduct(
     unitOfMeasure: input.unitOfMeasure,
     code: input.code,
     sku: input.sku,
+    barcode: input.barcode,
     basePrice: input.basePrice,
+    cost: input.cost,
     taxRate: input.taxRate,
     unitPrice,
     currency: input.currency,
@@ -40,7 +42,14 @@ export async function createProduct(
     priceLists: input.priceLists,
     customFields: input.customFields,
     accountingAccount: input.accountingAccount,
+    incomeAccount: input.incomeAccount,
+    inventoryAccount: input.inventoryAccount,
+    fiscalCode: input.fiscalCode,
     image: input.image,
+    warehouses: input.warehouses,
+    minStock: input.minStock,
+    maxStock: input.maxStock,
+    lowStockAlert: input.lowStockAlert,
   });
 
   return product.toObject();
@@ -65,8 +74,10 @@ export async function updateProduct(
     update.unitOfMeasure = input.unitOfMeasure;
   if (input.code !== undefined) update.code = input.code;
   if (input.sku !== undefined) update.sku = input.sku;
+  if (input.barcode !== undefined) update.barcode = input.barcode;
 
   if (input.basePrice !== undefined) update.basePrice = input.basePrice;
+  if (input.cost !== undefined) update.cost = input.cost;
   if (input.taxRate !== undefined) update.taxRate = input.taxRate;
 
   const basePrice =
@@ -86,7 +97,17 @@ export async function updateProduct(
   if (input.customFields !== undefined) update.customFields = input.customFields;
   if (input.accountingAccount !== undefined)
     update.accountingAccount = input.accountingAccount;
+  if (input.incomeAccount !== undefined)
+    update.incomeAccount = input.incomeAccount;
+  if (input.inventoryAccount !== undefined)
+    update.inventoryAccount = input.inventoryAccount;
+  if (input.fiscalCode !== undefined) update.fiscalCode = input.fiscalCode;
   if (input.image !== undefined) update.image = input.image;
+  if (input.warehouses !== undefined) update.warehouses = input.warehouses;
+  if (input.minStock !== undefined) update.minStock = input.minStock;
+  if (input.maxStock !== undefined) update.maxStock = input.maxStock;
+  if (input.lowStockAlert !== undefined)
+    update.lowStockAlert = input.lowStockAlert;
 
   const product = await Product.findOneAndUpdate(
     {

@@ -33,6 +33,15 @@ export interface ProductImage {
   filename?: string;
 }
 
+export interface WarehouseStock {
+  name: string;
+  quantity: number;
+}
+
+export interface ProductTriggers {
+  lowStockAlert: boolean;
+}
+
 export interface IProduct extends Document {
   tenantId: Types.ObjectId;
   itemType: ItemType;
@@ -43,7 +52,9 @@ export interface IProduct extends Document {
   unitOfMeasure?: UnitOfMeasure;
   code?: string;
   sku?: string;
+  barcode?: string;
   basePrice: number;
+  cost?: number;
   taxRate: number;
   unitPrice: number;
   currency: string;
@@ -51,7 +62,14 @@ export interface IProduct extends Document {
   priceLists?: PriceListEntry[];
   customFields?: CustomField[];
   accountingAccount?: string;
+  incomeAccount?: string;
+  inventoryAccount?: string;
+  fiscalCode?: string;
   image?: ProductImage;
+  warehouses?: WarehouseStock[];
+  minStock?: number;
+  maxStock?: number;
+  lowStockAlert?: boolean;
   metadata?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
@@ -105,6 +123,23 @@ const productImageSchema = new Schema<ProductImage>(
     },
     filename: {
       type: String,
+    },
+  },
+  { _id: false },
+);
+
+const warehouseStockSchema = new Schema<WarehouseStock>(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    quantity: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
     },
   },
   { _id: false },
@@ -175,9 +210,21 @@ const productSchema = new Schema<IProduct>(
       uppercase: true,
     },
 
+    barcode: {
+      type: String,
+      trim: true,
+      uppercase: true,
+    },
+
     basePrice: {
       type: Number,
       required: true,
+      min: 0,
+      default: 0,
+    },
+
+    cost: {
+      type: Number,
       min: 0,
       default: 0,
     },
@@ -223,8 +270,46 @@ const productSchema = new Schema<IProduct>(
       trim: true,
     },
 
+    incomeAccount: {
+      type: String,
+      trim: true,
+    },
+
+    inventoryAccount: {
+      type: String,
+      trim: true,
+    },
+
+    fiscalCode: {
+      type: String,
+      trim: true,
+      uppercase: true,
+    },
+
     image: {
       type: productImageSchema,
+    },
+
+    warehouses: {
+      type: [warehouseStockSchema],
+      default: [],
+    },
+
+    minStock: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+
+    maxStock: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+
+    lowStockAlert: {
+      type: Boolean,
+      default: false,
     },
 
     metadata: {

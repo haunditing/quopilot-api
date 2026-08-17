@@ -7,6 +7,8 @@ interface GetProductsInput {
   limit: number;
   search?: string;
   status?: "ACTIVE" | "INACTIVE";
+  category?: string;
+  itemType?: "PRODUCT" | "SERVICE" | "COMBO";
   currency?: string;
   minPrice?: number;
   maxPrice?: number;
@@ -19,6 +21,8 @@ export async function getProducts(input: GetProductsInput) {
     limit,
     search,
     status = "ACTIVE",
+    category,
+    itemType,
     currency,
     minPrice,
     maxPrice,
@@ -37,6 +41,14 @@ export async function getProducts(input: GetProductsInput) {
 
   if (currency?.trim()) {
     filter.currency = currency.trim().toUpperCase();
+  }
+
+  if (category?.trim()) {
+    filter.category = category.trim();
+  }
+
+  if (itemType !== undefined) {
+    filter.itemType = itemType;
   }
 
   const priceFilter: Record<string, number> = {};
@@ -96,7 +108,11 @@ export async function getProducts(input: GetProductsInput) {
   };
 }
 
-export async function getProductById(tenantId: string, productId: string) {
+export async function getProductById(
+  tenantId: string,
+  productId: string,
+  options: { includeInactive?: boolean } = {},
+) {
   if (!Types.ObjectId.isValid(tenantId)) {
     throw new Error("Invalid tenantId");
   }
@@ -105,11 +121,16 @@ export async function getProductById(tenantId: string, productId: string) {
     throw new Error("Invalid productId");
   }
 
-  const product = await Product.findOne({
+  const filter: Record<string, unknown> = {
     _id: new Types.ObjectId(productId),
     tenantId: new Types.ObjectId(tenantId),
-    status: "ACTIVE",
-  }).lean();
+  };
+
+  if (!options.includeInactive) {
+    filter.status = "ACTIVE";
+  }
+
+  const product = await Product.findOne(filter).lean();
 
   if (!product) {
     throw new Error("Product not found");

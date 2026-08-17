@@ -11,7 +11,10 @@ import {
   updateProduct,
   updateProductStatus,
 } from "../services/product-service.js";
-import { getProducts } from "../services/product-query-service.js";
+import {
+  getProductById,
+  getProducts,
+} from "../services/product-query-service.js";
 
 function handleProductError(
   res: Response,
@@ -61,6 +64,8 @@ export async function getProductsController(
     const limitParam = req.query.limit;
     const searchParam = req.query.search;
     const statusParam = req.query.status;
+    const categoryParam = req.query.category;
+    const itemTypeParam = req.query.itemType;
     const currencyParam = req.query.currency;
     const minPriceParam = req.query.minPrice;
     const maxPriceParam = req.query.maxPrice;
@@ -98,6 +103,26 @@ export async function getProductsController(
       status = statusParam;
     }
 
+    const category =
+      typeof categoryParam === "string" ? categoryParam : undefined;
+
+    let itemType: "PRODUCT" | "SERVICE" | "COMBO" | undefined;
+
+    if (itemTypeParam !== undefined) {
+      if (
+        itemTypeParam !== "PRODUCT" &&
+        itemTypeParam !== "SERVICE" &&
+        itemTypeParam !== "COMBO"
+      ) {
+        res.status(400).json({
+          message: "Invalid itemType",
+        });
+        return;
+      }
+
+      itemType = itemTypeParam;
+    }
+
     const currency =
       typeof currencyParam === "string" ? currencyParam : undefined;
 
@@ -123,6 +148,8 @@ export async function getProductsController(
       limit,
       search,
       status,
+      category,
+      itemType,
       currency,
       minPrice,
       maxPrice,
@@ -145,6 +172,41 @@ export async function getProductsController(
     res.status(500).json({
       message: "Unable to load products",
     });
+  }
+}
+
+export async function getProductController(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  const tenantId = req.user?.tenantId;
+
+  if (!tenantId) {
+    res.status(403).json({
+      message: "Tenant context required",
+    });
+
+    return;
+  }
+
+  const productId = req.params.productId;
+
+  if (typeof productId !== "string") {
+    res.status(400).json({
+      message: "Invalid productId",
+    });
+
+    return;
+  }
+
+  try {
+    const product = await getProductById(tenantId, productId, {
+      includeInactive: true,
+    });
+
+    res.status(200).json(product);
+  } catch (error) {
+    handleProductError(res, error, "Unable to load product");
   }
 }
 

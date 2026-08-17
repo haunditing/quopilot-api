@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   createProductController,
   deleteProductController,
+  getProductController,
   getProductsController,
   updateProductController,
   updateProductStatusController,
@@ -13,6 +14,13 @@ import { requireTenant } from "../middleware/tenant-middleware.js";
 const router = Router();
 
 router.get("/", authenticate, requireTenant, getProductsController);
+
+router.get(
+  "/:productId",
+  authenticate,
+  requireTenant,
+  getProductController,
+);
 
 router.post(
   "/",
