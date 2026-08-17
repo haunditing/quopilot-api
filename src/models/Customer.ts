@@ -1,10 +1,31 @@
 import mongoose, { Document, Schema, Types } from "mongoose";
 
+export type CustomerType = "CUSTOMER" | "SUPPLIER";
+
+export type IdentificationType =
+  | "CC"
+  | "CE"
+  | "NIT"
+  | "PASSPORT"
+  | "OTHER";
+
 export interface ICustomer extends Document {
   tenantId: Types.ObjectId;
   name?: string;
+  customerType?: CustomerType;
+  firstName?: string;
+  lastName?: string;
+  identificationType?: IdentificationType;
+  identificationNumber?: string;
+  municipality?: string;
+  department?: string;
+  address?: string;
+  postalCode?: string;
   email?: string;
+  email2?: string;
   phone?: string;
+  phone2?: string;
+  sendStatement?: boolean;
   whatsappId?: string;
   instagramId?: string;
   company?: string;
@@ -29,7 +50,59 @@ const customerSchema = new Schema<ICustomer>(
       trim: true,
     },
 
+    customerType: {
+      type: String,
+      enum: ["CUSTOMER", "SUPPLIER"],
+      default: "CUSTOMER",
+    },
+
+    firstName: {
+      type: String,
+      trim: true,
+    },
+
+    lastName: {
+      type: String,
+      trim: true,
+    },
+
+    identificationType: {
+      type: String,
+      enum: ["CC", "CE", "NIT", "PASSPORT", "OTHER"],
+    },
+
+    identificationNumber: {
+      type: String,
+      trim: true,
+    },
+
+    municipality: {
+      type: String,
+      trim: true,
+    },
+
+    department: {
+      type: String,
+      trim: true,
+    },
+
+    address: {
+      type: String,
+      trim: true,
+    },
+
+    postalCode: {
+      type: String,
+      trim: true,
+    },
+
     email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+    },
+
+    email2: {
       type: String,
       trim: true,
       lowercase: true,
@@ -38,6 +111,16 @@ const customerSchema = new Schema<ICustomer>(
     phone: {
       type: String,
       trim: true,
+    },
+
+    phone2: {
+      type: String,
+      trim: true,
+    },
+
+    sendStatement: {
+      type: Boolean,
+      default: false,
     },
 
     whatsappId: {
