@@ -549,9 +549,7 @@ export async function hasAvailableHumanAgents(
   const count = await User.countDocuments({
     tenantId: new Types.ObjectId(tenantId),
     status: "ACTIVE",
-    role: {
-      $in: ["AGENT", "TENANT_ADMIN"],
-    },
+    role: "AGENT",
   });
 
   return count > 0;
@@ -561,9 +559,7 @@ async function listHumanAgents(tenantId: string) {
   return User.find({
     tenantId: new Types.ObjectId(tenantId),
     status: "ACTIVE",
-    role: {
-      $in: ["AGENT", "TENANT_ADMIN"],
-    },
+    role: "AGENT",
   })
     .sort({
       createdAt: 1,
