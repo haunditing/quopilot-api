@@ -8,6 +8,7 @@ import {
   getTenantController,
   getTenantsController,
   getTenantUsersController,
+  updateCurrentTenantController,
   updateTenantController,
   updateTenantStatusController,
 } from "../controllers/tenant-controller.js";
@@ -15,6 +16,14 @@ import {
 const router = Router();
 
 router.get("/me", authenticate, requireTenant, getCurrentTenantController);
+
+router.patch(
+  "/me",
+  authenticate,
+  authorize("TENANT_ADMIN"),
+  requireTenant,
+  updateCurrentTenantController,
+);
 
 router.use(authenticate, authorize("SUPER_ADMIN"));
 

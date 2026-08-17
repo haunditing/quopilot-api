@@ -200,6 +200,40 @@ export async function getCurrentTenantController(
   }
 }
 
+export async function updateCurrentTenantController(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  const tenantId = req.user?.tenantId;
+
+  if (!tenantId) {
+    res.status(403).json({
+      message: "Tenant context required",
+    });
+
+    return;
+  }
+
+  const result = updateTenantSchema.safeParse(req.body);
+
+  if (!result.success) {
+    res.status(400).json({
+      message: "Invalid tenant data",
+      errors: result.error.flatten(),
+    });
+
+    return;
+  }
+
+  try {
+    const tenant = await updateTenant(tenantId, result.data);
+
+    res.status(200).json(tenant);
+  } catch (error) {
+    handleTenantError(res, error, "Unable to update tenant");
+  }
+}
+
 export async function createTenantController(
   req: AuthenticatedRequest,
   res: Response,

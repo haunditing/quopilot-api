@@ -49,6 +49,7 @@ export interface IAgent extends Document {
   tenantId: Types.ObjectId;
 
   name: string;
+  avatarData?: string;
   description?: string;
   personality?: string;
   systemInstructions?: string;
@@ -174,6 +175,11 @@ const agentSchema = new Schema<IAgent>(
     name: {
       type: String,
       required: true,
+      trim: true,
+    },
+
+    avatarData: {
+      type: String,
       trim: true,
     },
 

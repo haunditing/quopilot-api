@@ -49,6 +49,7 @@ const llmConfigSchema = z.object({
 
 export const updateAgentSchema = z.object({
   name: z.string().trim().min(1).optional(),
+  avatarData: z.string().trim().optional(),
   description: z.string().trim().optional(),
   personality: z.string().trim().optional(),
   systemInstructions: z.string().trim().optional(),

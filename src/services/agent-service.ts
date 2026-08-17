@@ -27,6 +27,10 @@ function buildUpdate(input: UpdateAgentInput): Record<string, unknown> {
     update.name = input.name;
   }
 
+  if (input.avatarData !== undefined) {
+    update.avatarData = input.avatarData;
+  }
+
   if (input.description !== undefined) {
     update.description = input.description;
   }

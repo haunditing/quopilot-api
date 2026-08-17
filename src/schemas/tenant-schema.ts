@@ -30,6 +30,21 @@ export const updateTenantSchema = z.object({
   country: optionalTrimmedString,
   currency: z.string().trim().min(1).optional(),
   timezone: z.string().trim().min(1).optional(),
+  address: optionalTrimmedString,
+  city: optionalTrimmedString,
+  department: optionalTrimmedString,
+  postalCode: optionalTrimmedString,
+  website: optionalTrimmedString,
+  logoUrl: optionalTrimmedString,
+  documentLogoUrl: optionalTrimmedString,
+  brandColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "brandColor must be a valid hex color")
+    .optional(),
+  footerText: optionalTrimmedString,
+  decimalPrecision: z.number().int().min(0).max(6).optional(),
+  thousandsSeparator: optionalTrimmedString,
+  decimalSeparator: optionalTrimmedString,
 });
 
 export const updateTenantStatusSchema = z.object({
