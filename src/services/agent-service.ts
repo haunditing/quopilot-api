@@ -112,6 +112,10 @@ function buildUpdate(input: UpdateAgentInput): Record<string, unknown> {
   }
 
   if (input.llm) {
+    if (input.llm.provider !== undefined) {
+      update["llm.provider"] = input.llm.provider;
+    }
+
     if (input.llm.apiKey !== undefined) {
       update["llm.apiKey"] = input.llm.apiKey;
     }

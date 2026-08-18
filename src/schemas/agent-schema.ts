@@ -40,6 +40,7 @@ const memoryConfigSchema = z.object({
 });
 
 const llmConfigSchema = z.object({
+  provider: z.string().trim().optional(),
   apiKey: z.string().trim().optional(),
   model: z.string().trim().optional(),
   baseUrl: z.string().trim().optional(),
