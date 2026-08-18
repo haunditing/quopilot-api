@@ -41,6 +41,7 @@ async function run() {
     tenantId,
     name: "Café Especial 500g",
     basePrice: 45000,
+    unitPrice: 45000,
     currency: "COP",
     itemType: "PRODUCT",
     sku: "CAFE-500",
