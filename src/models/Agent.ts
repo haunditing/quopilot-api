@@ -32,6 +32,7 @@ export interface IAgentEscalation {
 }
 
 export interface IAgentLLMConfig {
+  provider?: "openai" | "google" | "openrouter" | "custom";
   apiKey?: string;
   model?: string;
   baseUrl?: string;

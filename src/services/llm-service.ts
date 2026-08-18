@@ -277,6 +277,7 @@ class OpenAILLMService implements AgentLLMService {
 }
 
 export interface LLMServiceConfig {
+  provider?: "openai" | "google" | "openrouter" | "custom";
   apiKey?: string;
   model?: string;
   baseUrl?: string;
@@ -284,8 +285,8 @@ export interface LLMServiceConfig {
   timeoutMs?: number;
 }
 
-export function createLLMService(
-  config: LLMServiceConfig = {},
+function createOpenAILLMService(
+  config: Pick<LLMServiceConfig, "apiKey" | "model" | "baseUrl" | "maxTokens" | "timeoutMs">,
 ): AgentLLMService {
   const apiKey = config.apiKey?.trim();
 
@@ -304,4 +305,99 @@ export function createLLMService(
     config.maxTokens || env.llmMaxTokens,
     config.timeoutMs || env.llmRequestTimeoutMs,
   );
+}
+
+function createGoogleGeminiLLMService(
+  config: Pick<LLMServiceConfig, "apiKey" | "model" | "baseUrl" | "maxTokens" | "timeoutMs">,
+): AgentLLMService {
+  const apiKey = config.apiKey?.trim();
+
+  if (!apiKey) {
+    console.warn(
+      "[llm-service] No Google API key configured for this agent. Using offline demo mode.",
+    );
+
+    return new OfflineLLMService();
+  }
+
+  const baseUrl = config.baseUrl?.trim() || "https://generativelanguage.googleapis.com/v1beta/openai/";
+
+  return new OpenAILLMService(
+    apiKey,
+    config.model?.trim() || env.llmModel,
+    baseUrl,
+    config.maxTokens || env.llmMaxTokens,
+    config.timeoutMs || env.llmRequestTimeoutMs,
+  );
+}
+
+function createOpenRouterLLMService(
+  config: Pick<LLMServiceConfig, "apiKey" | "model" | "baseUrl" | "maxTokens" | "timeoutMs">,
+): AgentLLMService {
+  const apiKey = config.apiKey?.trim();
+
+  if (!apiKey) {
+    console.warn(
+      "[llm-service] No OpenRouter API key configured for this agent. Using offline demo mode.",
+    );
+
+    return new OfflineLLMService();
+  }
+
+  const baseUrl = config.baseUrl?.trim() || "https://openrouter.ai/api/v1";
+
+  return new OpenAILLMService(
+    apiKey,
+    config.model?.trim() || env.llmModel,
+    baseUrl,
+    config.maxTokens || env.llmMaxTokens,
+    config.timeoutMs || env.llmRequestTimeoutMs,
+  );
+}
+
+export function createLLMService(
+  config: LLMServiceConfig = {},
+): AgentLLMService {
+  console.log("createLLMService called with config:", JSON.stringify(config));
+
+  const provider = config.provider?.trim() || env.llmProvider || "openai";
+  console.log(`Determined provider: ${provider}`);
+
+  if (!config.apiKey) {
+    console.warn(
+      `[llm-service] No API key configured for this agent. Using offline demo mode.`,
+    );
+
+    return new OfflineLLMService();
+  }
+
+  switch (provider) {
+    case "google":
+      return createGoogleGeminiLLMService({
+        apiKey: config.apiKey,
+        model: config.model,
+        baseUrl: config.baseUrl,
+        maxTokens: config.maxTokens,
+        timeoutMs: config.timeoutMs,
+      });
+
+    case "openrouter":
+      return createOpenRouterLLMService({
+        apiKey: config.apiKey,
+        model: config.model,
+        baseUrl: config.baseUrl,
+        maxTokens: config.maxTokens,
+        timeoutMs: config.timeoutMs,
+      });
+
+    case "openai":
+default:
+      return createOpenAILLMService({
+        apiKey: config.apiKey,
+        model: config.model,
+        baseUrl: config.baseUrl,
+        maxTokens: config.maxTokens,
+        timeoutMs: config.timeoutMs,
+      });
+  }
 }

@@ -9,6 +9,7 @@ const env = {
   agentMaxToolIterations: Number(process.env.AGENT_MAX_TOOL_ITERATIONS ?? 5),
   agentMemoryWindow: Number(process.env.AGENT_MEMORY_WINDOW ?? 30),
   agentContextBudget: Number(process.env.AGENT_CONTEXT_BUDGET ?? 12000),
+  llmProvider: process.env.LLM_PROVIDER ?? "openai",
   channelSecret:
     process.env.CHANNEL_SECRET ??
     (process.env.NODE_ENV === "production" ? "" : process.env.JWT_SECRET ?? ""),

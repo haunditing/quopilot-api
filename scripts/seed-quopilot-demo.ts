@@ -73,6 +73,11 @@ async function seedQuoPilotDemo() {
     ],
     productScope: "ALL" as const,
     status: "ACTIVE" as const,
+    llm: {
+      provider: "google",
+      apiKey: process.env.GEMINI_API_KEY ?? "AIzaSyDemoKey1234567890abcdefghi",
+      model: "gemini-1.5-flash-lite",
+    } as const,
   };
 
   if (!agent) {
