@@ -21,6 +21,7 @@ import agentPublicRoutes from "./routes/agent-public-routes.js";
 import channelRoutes from "./routes/channel-routes.js";
 import webhookRoutes from "./routes/webhook-routes.js";
 import conversationRoutes from "./routes/conversation-routes.js";
+import internalAssistantRoutes from "./routes/internal-assistant-routes.js";
 
 type RawBodyRequest = Request & {
   rawBody?: Buffer;
@@ -67,5 +68,6 @@ app.use("/api/agent/public", agentPublicRoutes);
 app.use("/api/channels", channelRoutes);
 app.use("/api/webhooks", webhookRoutes);
 app.use("/api/conversations", conversationRoutes);
+app.use("/api/internal/assistant", internalAssistantRoutes);
 
 export default app;
