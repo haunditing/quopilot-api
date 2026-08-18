@@ -70,7 +70,9 @@ function formatProductList(content: string): string {
     };
 
     if (!result.data?.length) {
-      return result.message ?? "No encontré productos que coincidan con tu búsqueda.";
+      return (
+        result.message ?? "No encontré productos que coincidan con tu búsqueda."
+      );
     }
 
     const lines = result.data.map(
@@ -241,7 +243,9 @@ class OpenAILLMService implements AgentLLMService {
       const body = (await response.json()) as OpenAIResponse;
 
       if (!response.ok) {
-        throw new Error(body.error?.message ?? `LLM request failed: ${response.status}`);
+        throw new Error(
+          body.error?.message ?? `LLM request failed: ${response.status}`,
+        );
       }
 
       const choice = body.choices?.[0];
@@ -286,7 +290,10 @@ export interface LLMServiceConfig {
 }
 
 function createOpenAILLMService(
-  config: Pick<LLMServiceConfig, "apiKey" | "model" | "baseUrl" | "maxTokens" | "timeoutMs">,
+  config: Pick<
+    LLMServiceConfig,
+    "apiKey" | "model" | "baseUrl" | "maxTokens" | "timeoutMs"
+  >,
 ): AgentLLMService {
   const apiKey = config.apiKey?.trim();
 
@@ -307,8 +314,213 @@ function createOpenAILLMService(
   );
 }
 
+function sanitizeGeminiSchema(obj: unknown): unknown {
+  if (obj === null || typeof obj !== "object") {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizeGeminiSchema);
+  }
+
+  const record = obj as Record<string, unknown>;
+  const result: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(record)) {
+    if (key === "additionalProperties") {
+      continue;
+    }
+    result[key] = sanitizeGeminiSchema(value);
+  }
+
+  return result;
+}
+
+class GoogleGeminiLLMService implements AgentLLMService {
+  constructor(
+    private readonly apiKey: string,
+    private readonly model: string,
+    private readonly baseUrl: string,
+    private readonly maxTokens: number,
+    private readonly timeoutMs: number,
+  ) {}
+
+  async complete(
+    messages: AgentChatMessage[],
+    tools?: AgentToolDefinition[],
+  ): Promise<AgentLLMResult> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    try {
+      let systemInstruction: string | undefined;
+      const contents: Array<Record<string, unknown>> = [];
+
+      // Extract system instruction and map other roles
+      for (const message of messages) {
+        if (message.role === "system") {
+          systemInstruction = message.content;
+        } else if (message.role === "assistant" && message.toolCalls?.length) {
+          // Map assistant tool calls
+          contents.push({
+            role: "model",
+            parts: [
+              ...(message.content ? [{ text: message.content }] : []),
+              ...message.toolCalls.map((toolCall) => ({
+                functionCall: {
+                  name: toolCall.name,
+                  args: JSON.parse(toolCall.arguments),
+                },
+              })),
+            ],
+          });
+        } else if (message.role === "tool") {
+          // Parse string response into an object for Gemini API
+          let parsedResponse: Record<string, unknown>;
+          try {
+            parsedResponse =
+              typeof message.content === "string"
+                ? JSON.parse(message.content)
+                : message.content;
+          } catch {
+            parsedResponse = { result: message.content };
+          }
+
+          // Map tool responses
+          contents.push({
+            role: "user",
+            parts: [
+              {
+                functionResponse: {
+                  name: message.toolCallId || "searchProducts",
+                  response: parsedResponse,
+                },
+              },
+            ],
+          });
+        } else {
+          // Map user and assistant (without tool calls) messages
+          contents.push({
+            role: message.role === "assistant" ? "model" : message.role,
+            parts: [{ text: message.content }],
+          });
+        }
+      }
+
+      const geminiTools = tools?.map((tool) => {
+        const cleanedParameters = sanitizeGeminiSchema(
+          tool.parameters,
+        ) as Record<string, unknown>;
+
+        return {
+          function_declarations: [
+            {
+              name: tool.name,
+              description: tool.description,
+              parameters: cleanedParameters,
+            },
+          ],
+        };
+      });
+
+      const requestBody: Record<string, unknown> = {
+        contents: contents,
+        safety_settings: [
+          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+          {
+            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            threshold: "BLOCK_NONE",
+          },
+          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+          {
+            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+            threshold: "BLOCK_NONE",
+          },
+        ],
+        generation_config: {
+          max_output_tokens: this.maxTokens,
+          temperature: 0.7,
+          top_p: 1,
+          top_k: 1,
+        },
+      };
+
+      if (systemInstruction) {
+        requestBody.system_instruction = {
+          parts: [{ text: systemInstruction }],
+        };
+      }
+
+      if (geminiTools && geminiTools.length > 0) {
+        requestBody.tools = geminiTools;
+      }
+
+      const response = await fetch(
+        `${this.baseUrl.replace(/\/$/, "")}/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+          signal: controller.signal,
+        },
+      );
+
+      const body = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          body.error?.message ?? `LLM request failed: ${response.status}`,
+        );
+      }
+
+      const choice = body.candidates?.[0];
+
+      if (!choice) {
+        throw new Error("LLM returned no choices");
+      }
+
+      const parts = choice.content?.parts ?? [];
+      const textParts = parts
+        .filter((part: any) => part.text)
+        .map((part: any) => part.text)
+        .join("");
+      const toolCalls = parts
+        .filter((part: any) => part.functionCall)
+        .map((part: any) => ({
+          id: part.functionCall.name,
+          name: part.functionCall.name,
+          arguments: JSON.stringify(part.functionCall.args),
+        }));
+
+      const finishReason =
+        choice.finishReason === "STOP"
+          ? "stop"
+          : choice.finishReason === "MAX_TOKENS"
+            ? "length"
+            : "stop";
+
+      return {
+        content: textParts,
+        toolCalls: toolCalls,
+        finishReason: finishReason,
+        usage: {
+          promptTokens: body.usageMetadata?.promptTokenCount,
+          completionTokens: body.usageMetadata?.candidatesTokenCount,
+        },
+      };
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+}
+
 function createGoogleGeminiLLMService(
-  config: Pick<LLMServiceConfig, "apiKey" | "model" | "baseUrl" | "maxTokens" | "timeoutMs">,
+  config: Pick<
+    LLMServiceConfig,
+    "apiKey" | "model" | "baseUrl" | "maxTokens" | "timeoutMs"
+  >,
 ): AgentLLMService {
   const apiKey = config.apiKey?.trim();
 
@@ -320,9 +532,10 @@ function createGoogleGeminiLLMService(
     return new OfflineLLMService();
   }
 
-  const baseUrl = config.baseUrl?.trim() || "https://generativelanguage.googleapis.com/v1beta/openai/";
+  const baseUrl =
+    config.baseUrl?.trim() || "https://generativelanguage.googleapis.com";
 
-  return new OpenAILLMService(
+  return new GoogleGeminiLLMService(
     apiKey,
     config.model?.trim() || env.llmModel,
     baseUrl,
@@ -332,7 +545,10 @@ function createGoogleGeminiLLMService(
 }
 
 function createOpenRouterLLMService(
-  config: Pick<LLMServiceConfig, "apiKey" | "model" | "baseUrl" | "maxTokens" | "timeoutMs">,
+  config: Pick<
+    LLMServiceConfig,
+    "apiKey" | "model" | "baseUrl" | "maxTokens" | "timeoutMs"
+  >,
 ): AgentLLMService {
   const apiKey = config.apiKey?.trim();
 
@@ -358,10 +574,7 @@ function createOpenRouterLLMService(
 export function createLLMService(
   config: LLMServiceConfig = {},
 ): AgentLLMService {
-  console.log("createLLMService called with config:", JSON.stringify(config));
-
   const provider = config.provider?.trim() || env.llmProvider || "openai";
-  console.log(`Determined provider: ${provider}`);
 
   if (!config.apiKey) {
     console.warn(
@@ -391,7 +604,7 @@ export function createLLMService(
       });
 
     case "openai":
-default:
+    default:
       return createOpenAILLMService({
         apiKey: config.apiKey,
         model: config.model,

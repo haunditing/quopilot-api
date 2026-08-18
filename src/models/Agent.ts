@@ -136,6 +136,12 @@ const agentMemorySchema = new Schema<IAgentMemory>(
 
 const agentLLMConfigSchema = new Schema<IAgentLLMConfig>(
   {
+    provider: {
+      type: String,
+      trim: true,
+      enum: ["openai", "google", "openrouter", "custom"],
+      default: "openai",
+    },
     apiKey: {
       type: String,
       trim: true,
