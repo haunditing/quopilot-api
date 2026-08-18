@@ -18,6 +18,7 @@ import {
   verifyPublicChatToken,
   type PublicChatTokenPayload,
 } from "../utils/public-chat-token.js";
+import { getConversation } from "../services/agent-conversation-service.js";
 
 function handlePublicError(
   res: Response,
@@ -124,10 +125,10 @@ function verifyChatToken(
   }
 }
 
-function authorizeChatAccess(
+async function authorizeChatAccess(
   req: AuthenticatedRequest,
   res: Response,
-): PublicChatTokenPayload | null {
+): Promise<PublicChatTokenPayload | null> {
   const tenantId = String(req.params.tenantId ?? "");
   const conversationId = String(req.params.conversationId ?? "");
 
@@ -143,6 +144,24 @@ function authorizeChatAccess(
   ) {
     res.status(403).json({
       message: "Chat token does not match conversation",
+    });
+
+    return null;
+  }
+
+  try {
+    const conversation = await getConversation(tenantId, conversationId);
+
+    if (conversation.customerId.toString() !== payload.customerId) {
+      res.status(403).json({
+        message: "Chat token does not match customer",
+      });
+
+      return null;
+    }
+  } catch {
+    res.status(404).json({
+      message: "Conversation not found",
     });
 
     return null;
@@ -202,7 +221,7 @@ export async function listPublicMessagesController(
   const tenantId = String(req.params.tenantId ?? "");
   const conversationId = String(req.params.conversationId ?? "");
 
-  const payload = authorizeChatAccess(req, res);
+  const payload = await authorizeChatAccess(req, res);
 
   if (!payload) {
     return;
@@ -228,7 +247,7 @@ export async function sendPublicMessageController(
   const tenantId = String(req.params.tenantId ?? "");
   const conversationId = String(req.params.conversationId ?? "");
 
-  const payload = authorizeChatAccess(req, res);
+  const payload = await authorizeChatAccess(req, res);
 
   if (!payload) {
     return;
@@ -266,7 +285,7 @@ export async function getPublicTypingController(
   const tenantId = String(req.params.tenantId ?? "");
   const conversationId = String(req.params.conversationId ?? "");
 
-  const payload = authorizeChatAccess(req, res);
+  const payload = await authorizeChatAccess(req, res);
 
   if (!payload) {
     return;
@@ -291,7 +310,7 @@ export async function setPublicTypingController(
   const tenantId = String(req.params.tenantId ?? "");
   const conversationId = String(req.params.conversationId ?? "");
 
-  const payload = authorizeChatAccess(req, res);
+  const payload = await authorizeChatAccess(req, res);
 
   if (!payload) {
     return;
@@ -328,7 +347,7 @@ export async function closePublicChatController(
   const tenantId = String(req.params.tenantId ?? "");
   const conversationId = String(req.params.conversationId ?? "");
 
-  const payload = authorizeChatAccess(req, res);
+  const payload = await authorizeChatAccess(req, res);
 
   if (!payload) {
     return;
