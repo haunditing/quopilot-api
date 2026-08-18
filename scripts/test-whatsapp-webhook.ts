@@ -19,7 +19,6 @@ async function run() {
     _id: tenantId,
     name: "Tenant WhatsApp Test",
     email: `watest-${Date.now()}@test.com`,
-    adminName: "Admin",
     status: "ACTIVE",
   });
 
@@ -92,18 +91,37 @@ async function run() {
   console.log("  [PASS] Webhook processed 1 message");
 
   console.log("2. Verifying customer creation and message persistence...");
-  const customer = await Customer.findOne({ tenantId, whatsappId: "573009876543" });
+  const customer = await Customer.findOne({
+    tenantId,
+    whatsappId: "573009876543",
+  });
   console.assert(Boolean(customer), "Customer created from WhatsApp message");
-  console.assert(customer?.name === "Maria Perez", "Customer name extracted correctly");
+  console.assert(
+    customer?.name === "Maria Perez",
+    "Customer name extracted correctly",
+  );
 
-  const message = await Message.findOne({ tenantId, externalMessageId: realisticPayload.entry[0].changes[0].value.messages[0].id });
+  const message = await Message.findOne({
+    tenantId,
+    externalMessageId:
+      realisticPayload.entry[0].changes[0].value.messages[0].id,
+  });
   console.assert(Boolean(message), "Inbound message persisted in database");
-  console.assert(message?.content === "Hola, ¿qué productos de café tienen disponibles?", "Message content correct");
+  console.assert(
+    message?.content === "Hola, ¿qué productos de café tienen disponibles?",
+    "Message content correct",
+  );
   console.log("  [PASS] Customer and message persistence verified");
 
   console.log("3. Testing idempotency / duplicate message protection...");
-  const resultDuplicate = await processWhatsAppWebhook(runtimeChannel, realisticPayload);
-  console.assert(resultDuplicate.processed === 0, "Duplicate message ignored (0 processed)");
+  const resultDuplicate = await processWhatsAppWebhook(
+    runtimeChannel,
+    realisticPayload,
+  );
+  console.assert(
+    resultDuplicate.processed === 0,
+    "Duplicate message ignored (0 processed)",
+  );
   console.log("  [PASS] Duplicate message protection working");
 
   // Cleanup
@@ -112,7 +130,9 @@ async function run() {
   await Channel.deleteMany({ tenantId });
   await Customer.deleteMany({ tenantId });
   await Message.deleteMany({ tenantId });
-  await mongoose.connection.collection("conversations").deleteMany({ tenantId });
+  await mongoose.connection
+    .collection("conversations")
+    .deleteMany({ tenantId });
 
   await mongoose.disconnect();
   console.log("\nRESULT: WHATSAPP WEBHOOK TESTS PASSED");

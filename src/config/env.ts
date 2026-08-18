@@ -9,7 +9,9 @@ const env = {
   agentMaxToolIterations: Number(process.env.AGENT_MAX_TOOL_ITERATIONS ?? 5),
   agentMemoryWindow: Number(process.env.AGENT_MEMORY_WINDOW ?? 30),
   agentContextBudget: Number(process.env.AGENT_CONTEXT_BUDGET ?? 12000),
-  channelSecret: process.env.CHANNEL_SECRET ?? process.env.JWT_SECRET ?? "",
+  channelSecret:
+    process.env.CHANNEL_SECRET ??
+    (process.env.NODE_ENV === "production" ? "" : process.env.JWT_SECRET ?? ""),
   conversationIdleTimeoutMs: Number(
     process.env.CONVERSATION_IDLE_TIMEOUT_MS ?? 30 * 60 * 1000,
   ),
@@ -20,6 +22,10 @@ const env = {
 
 if (!env.mongodbUri) {
   throw new Error("MONGODB_URI is required");
+}
+
+if (env.nodeEnv === "production" && !process.env.CHANNEL_SECRET) {
+  throw new Error("CHANNEL_SECRET is required in production");
 }
 
 export default env;

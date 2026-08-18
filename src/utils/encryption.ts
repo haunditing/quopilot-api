@@ -17,10 +17,14 @@ export interface EncryptedValue {
 }
 
 function getSecret(): string {
-  const secret = process.env.CHANNEL_SECRET ?? process.env.JWT_SECRET;
+  const secret = process.env.CHANNEL_SECRET;
 
   if (!secret) {
-    throw new Error("CHANNEL_SECRET is not defined");
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("CHANNEL_SECRET is required in production");
+    }
+
+    return process.env.JWT_SECRET ?? "dev-fallback-secret";
   }
 
   return secret;
