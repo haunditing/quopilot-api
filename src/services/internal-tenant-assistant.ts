@@ -37,6 +37,16 @@ import { getTenantDashboardSummary } from "./tenant-dashboard-service.js";
 import { getQuotes, getQuoteStatus } from "./quote-query-service.js";
 import { getSales } from "./sale-query-service.js";
 import { getCustomers } from "./customer-query-service.js";
+import { analyzeWebsite } from "./website-analysis-service.js";
+import {
+  applyProposal,
+  buildProposalFromText,
+  clearPendingProposal,
+  formatProposal,
+  hasPendingProposal,
+  stageProposal,
+  websiteProposalSchema,
+} from "./website-proposal-service.js";
 
 export const INTERNAL_TENANT_ASSISTANT_ID = "tenant-internal-assistant";
 
@@ -890,7 +900,131 @@ const getCustomersTool = {
   },
 };
 
+const analyzeWebsiteTool = {
+  name: "analyzeWebsite",
+  description:
+    "Obtiene y limpia el texto público de una página web para ayudar al administrador a configurar su negocio (por ejemplo, para extraer información de su sitio web). Recibe una URL http/https pública.",
+  parameters: {
+    type: "object",
+    properties: {
+      url: { type: "string", description: "URL pública http/https de la página a analizar" },
+    },
+    required: ["url"],
+    additionalProperties: false,
+  },
+
+  async execute(
+    ctx: AssistantContext,
+    args: Record<string, unknown>,
+  ): Promise<AssistantToolResult> {
+    if (typeof args.url !== "string" || !args.url.trim()) {
+      return fail("Se requiere una URL válida (http/https).");
+    }
+
+    try {
+      const result = await analyzeWebsite({ url: args.url });
+
+      return ok(result, "Contenido de la página obtenido correctamente.");
+    } catch (error) {
+      return fail(
+        error instanceof Error ? error.message : "Unable to analyze website",
+      );
+    }
+  },
+};
+
+const saveWebsiteProposalTool = {
+  name: "saveWebsiteProposal",
+  description:
+    "Guarda una propuesta pendiente de configuración derivada del análisis de una página web. No persiste nada: queda en memoria hasta que el usuario la confirme explícitamente. Recibe la propuesta completa (url, tenant, agent, products y commercialPolicy).",
+  parameters: {
+    type: "object",
+    properties: {
+      url: { type: "string" },
+      tenant: {
+        type: "object",
+        description:
+          "Datos de la empresa extraídos de la web (name, website, email, phone, address, city, country).",
+      },
+      agent: {
+        type: "object",
+        description:
+          "Configuración sugerida del agente (name, description, tone, language, welcomeMessage, commercialObjective, behaviorRules).",
+      },
+      products: {
+        type: "array",
+        description: "Productos detectados en la web (máximo 50).",
+        items: {
+          type: "object",
+          description:
+            "Producto con al menos name; opcionalmente description, category, basePrice, currency.",
+        },
+      },
+      commercialPolicy: {
+        type: "object",
+        description: "Política comercial detectada.",
+        properties: {
+          paymentTerms: { type: "string" },
+          discountPolicy: { type: "string" },
+          shippingPolicy: { type: "string" },
+          warrantyPolicy: { type: "string" },
+          returnPolicy: { type: "string" },
+          notes: { type: "string" },
+        },
+      },
+    },
+    required: ["url"],
+    additionalProperties: false,
+  },
+
+  async execute(
+    ctx: AssistantContext,
+    args: Record<string, unknown>,
+  ): Promise<AssistantToolResult> {
+    const parsed = websiteProposalSchema.safeParse(args);
+
+    if (!parsed.success) {
+      return fail(`Datos inválidos: ${JSON.stringify(parsed.error.flatten())}`);
+    }
+
+    const stored = stageProposal(ctx.tenantId, parsed.data);
+
+    return ok(
+      { stored },
+      "Propuesta guardada en memoria. Nada se persiste hasta confirmación explícita.",
+    );
+  },
+};
+
+const confirmWebsiteProposalTool = {
+  name: "confirmWebsiteProposal",
+  description:
+    "Aplica la propuesta pendiente del análisis de la página web: actualiza el tenant, el agente, crea los productos y actualiza la política comercial. Solo debe llamarse después de la confirmación explícita del usuario.",
+  parameters: {
+    type: "object",
+    properties: {},
+    additionalProperties: false,
+  },
+
+  async execute(ctx: AssistantContext): Promise<AssistantToolResult> {
+    try {
+      const summary = await applyProposal(ctx.tenantId);
+
+      return ok(
+        summary,
+        "Propuesta aplicada correctamente al negocio del tenant.",
+      );
+    } catch (error) {
+      return fail(
+        error instanceof Error ? error.message : "Unable to confirm website proposal",
+      );
+    }
+  },
+};
+
 class OfflineInternalTenantLLM implements AgentLLMService {
+  constructor(private readonly tenantId: string) {}
+
   async complete(messages: AgentChatMessage[]): Promise<AgentLLMResult> {
     const lastTool = [...messages]
       .reverse()
@@ -918,6 +1052,62 @@ class OfflineInternalTenantLLM implements AgentLLMService {
     }
 
     if (!lastTool) {
+      const pending = hasPendingProposal(this.tenantId);
+
+      if (pending) {
+        const text = lastUser?.content.toLowerCase() ?? "";
+
+        if (
+          /\b(confirmar|confirma|guardar|guarda|dale|adelante|s[ií]|ok|aprobado|de acuerdo|listo)\b/.test(
+            text,
+          )
+        ) {
+          return {
+            content: "",
+            toolCalls: [
+              {
+                id: "offline-confirm-proposal",
+                name: "confirmWebsiteProposal",
+                arguments: "{}",
+              },
+            ],
+            finishReason: "tool_calls",
+          };
+        }
+
+        if (/\b(cancelar|cancela|descartar|descartar|no)\b/.test(text)) {
+          clearPendingProposal(this.tenantId);
+          return {
+            content: "Entendido, he descartado la propuesta pendiente.",
+            toolCalls: [],
+            finishReason: "stop",
+          };
+        }
+
+        return {
+          content:
+            "Hay una propuesta de configuración pendiente basada en el análisis de tu web. ¿Deseas que la guarde y aplique? (Responde 'confirmar' o 'cancelar').",
+          toolCalls: [],
+          finishReason: "stop",
+        };
+      }
+
+      const urlMatch = lastUser?.content.match(/https?:\/\/[^\s]+/i);
+
+      if (urlMatch) {
+        return {
+          content: "",
+          toolCalls: [
+            {
+              id: "offline-analyze-website",
+              name: "analyzeWebsite",
+              arguments: JSON.stringify({ url: urlMatch[0].replace(/[.,;:]+$/, "") }),
+            },
+          ],
+          finishReason: "tool_calls",
+        };
+      }
+
       return {
         content: "",
         toolCalls: [
@@ -966,6 +1156,79 @@ class OfflineInternalTenantLLM implements AgentLLMService {
       };
     }
 
+    if (lastToolName === "analyzeWebsite" && parsed.ok) {
+      const data = (parsed.data ?? {}) as {
+        url?: string;
+        title?: string;
+        text?: string;
+        finalUrl?: string;
+      };
+
+      const proposal = buildProposalFromText({
+        url: data.finalUrl ?? data.url ?? "https://example.com",
+        title: data.title,
+        text: data.text ?? "",
+      });
+
+      stageProposal(this.tenantId, proposal);
+
+      const formatted = formatProposal(proposal);
+
+      return {
+        content: [
+          formatted,
+          "",
+          "¿Quieres que aplique esta configuración a tu negocio? (Responde 'confirmar' para aplicarla o 'cancelar' para descartarla).",
+        ].join("\n"),
+        toolCalls: [
+          {
+            id: "offline-save-proposal",
+            name: "saveWebsiteProposal",
+            arguments: JSON.stringify(proposal),
+          },
+        ],
+        finishReason: "tool_calls",
+      };
+    }
+
+    if (lastToolName === "saveWebsiteProposal" && parsed.ok) {
+      return {
+        content:
+          "He guardado la propuesta en memoria. Revisa los detalles anteriores y dime si deseas confirmarla.",
+        toolCalls: [],
+        finishReason: "stop",
+      };
+    }
+
+    if (lastToolName === "confirmWebsiteProposal" && parsed.ok) {
+      const summary = (parsed.data ?? {}) as {
+        tenant?: boolean;
+        agent?: boolean;
+        products?: number;
+        commercialPolicy?: boolean;
+        errors?: string[];
+      };
+
+      const lines = ["¡Listo! Propuesta aplicada con éxito:"];
+      if (summary.tenant) lines.push("- Empresa actualizada.");
+      if (summary.agent) lines.push("- Agente de IA configurado.");
+      if (summary.products && summary.products > 0)
+        lines.push(`- Se crearon ${summary.products} producto(s).`);
+      if (summary.commercialPolicy) lines.push("- Política comercial actualizada.");
+      if (summary.errors?.length) {
+        lines.push("", "Algunos elementos tuvieron problemas:");
+        for (const err of summary.errors) {
+          lines.push(`- ${err}`);
+        }
+      }
+
+      return {
+        content: lines.join("\n"),
+        toolCalls: [],
+        finishReason: "stop",
+      };
+    }
+
     return {
       content: parsed.ok
         ? `Listo. ${parsed.message}`
@@ -994,6 +1257,9 @@ const internalTenantAssistant: AssistantDefinition = {
     getCommercialPolicyTool,
     updateCommercialPolicyTool,
     getBusinessSummaryTool,
+    analyzeWebsiteTool,
+    saveWebsiteProposalTool,
+    confirmWebsiteProposalTool,
     getQuotesTool,
     getQuoteStatusTool,
     getSalesTool,
@@ -1008,6 +1274,7 @@ const internalTenantAssistant: AssistantDefinition = {
       "Trabajas EXCLUSIVAMENTE con los datos del tenant actual. Nunca accedas a datos de otros tenants.",
       "Usa SIEMPRE las herramientas disponibles para leer o modificar datos; no inventes valores.",
       "Cuando el usuario pida un cambio, ejecuta la herramienta correspondiente con SOLO los campos que cambian y confirma lo que hiciste.",
+      "Para analizar la página web del negocio: analiza el sitio con analyzeWebsite, guarda la propuesta con saveWebsiteProposal y preséntala al usuario. NUNCA apliques productos, precios, políticas ni datos inferidos sin la confirmación explícita del usuario; usa confirmWebsiteProposal solo después de su confirmación.",
       "Nunca reveles una API Key completa: al mencionarla, muéstrala enmascarada (primeros y últimos 3 caracteres).",
       "Responde en español, de forma breve y directa.",
       `Tenant: ${ctx.tenantId}`,
@@ -1021,7 +1288,7 @@ const internalTenantAssistant: AssistantDefinition = {
       return createLLMService(agent.llm);
     }
 
-    return new OfflineInternalTenantLLM();
+    return new OfflineInternalTenantLLM(ctx.tenantId);
   },
 };
 
