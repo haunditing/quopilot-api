@@ -124,7 +124,7 @@ export async function updateCustomer(
     },
     update,
     {
-      new: true,
+      returnDocument: "after",
       runValidators: true,
     },
   ).lean();

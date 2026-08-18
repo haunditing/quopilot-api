@@ -121,7 +121,7 @@ export async function updateTenant(
   assertValidTenantId(tenantId);
 
   const tenant = await Tenant.findByIdAndUpdate(tenantId, input, {
-    new: true,
+    returnDocument: "after",
     runValidators: true,
   }).lean();
 

@@ -116,7 +116,7 @@ export async function updateProduct(
     },
     update,
     {
-      new: true,
+      returnDocument: "after",
       runValidators: true,
     },
   ).lean();
@@ -145,7 +145,7 @@ export async function updateProductStatus(
       status,
     },
     {
-      new: true,
+      returnDocument: "after",
       runValidators: true,
     },
   ).lean();

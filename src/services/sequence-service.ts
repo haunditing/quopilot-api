@@ -21,7 +21,7 @@ export async function getNextSequence(
       },
     },
     {
-      new: true,
+      returnDocument: "after",
       upsert: true,
       setDefaultsOnInsert: true,
       ...(session ? { session } : {}),

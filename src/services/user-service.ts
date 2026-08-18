@@ -183,7 +183,7 @@ export async function updateUser(
     },
     update,
     {
-      new: true,
+      returnDocument: "after",
       runValidators: true,
     },
   )
@@ -215,7 +215,7 @@ export async function updateUserStatus(
       status,
     },
     {
-      new: true,
+      returnDocument: "after",
       runValidators: true,
     },
   )
