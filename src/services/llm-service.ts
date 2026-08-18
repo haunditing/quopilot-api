@@ -2,6 +2,8 @@ import env from "../config/env.js";
 
 export type AgentChatRole = "system" | "user" | "assistant" | "tool";
 
+export type LLMProvider = "openai" | "google" | "openrouter";
+
 export interface AgentChatMessage {
   role: AgentChatRole;
   content: string;
@@ -37,6 +39,48 @@ export interface AgentLLMService {
     tools?: AgentToolDefinition[],
   ): Promise<AgentLLMResult>;
 }
+
+export interface LLMServiceConfig {
+  provider?: LLMProvider | string;
+  apiKey?: string;
+  model?: string;
+  baseUrl?: string;
+  maxTokens?: number;
+  timeoutMs?: number;
+}
+
+interface ResolvedLLMConfig {
+  provider: LLMProvider;
+  apiKey?: string;
+  model: string;
+  baseUrl: string;
+  maxTokens: number;
+  timeoutMs: number;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Constants                                                                  */
+/* -------------------------------------------------------------------------- */
+
+const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
+
+const DEFAULT_GOOGLE_BASE_URL = "https://generativelanguage.googleapis.com";
+
+const DEFAULT_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
+
+const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
+
+const DEFAULT_GOOGLE_MODEL = "gemini-2.5-flash";
+
+const DEFAULT_OPENROUTER_MODEL = "openai/gpt-4o-mini";
+
+const DEFAULT_MAX_TOKENS = 1024;
+
+const DEFAULT_TIMEOUT_MS = 30000;
+
+/* -------------------------------------------------------------------------- */
+/* Product offline demo                                                       */
+/* -------------------------------------------------------------------------- */
 
 const PRODUCT_INTENT_PATTERN =
   /producto|precio|cu[aá]nto|cuesta|catalogo|cat[aá]logo|disponible|tienes|sku|venden|valor|cuot[oa]/i;
@@ -80,13 +124,17 @@ function formatProductList(content: string): string {
         `- ${product.name}${product.sku ? ` (${product.sku})` : ""}: $${product.unitPrice} ${product.currency ?? ""}`,
     );
 
-    return `Encontré estos productos:\n${lines.join("\n")}\n¿Te interesa alguno para prepararte una cotización?`;
+    return `Encontré estos productos:\n${lines.join(
+      "\n",
+    )}\n¿Te interesa alguno para prepararte una cotización?`;
   } catch {
     return "Lo siento, no pude consultar los productos en este momento.";
   }
 }
 
 class OfflineLLMService implements AgentLLMService {
+  constructor(private readonly provider: LLMProvider) {}
+
   async complete(messages: AgentChatMessage[]): Promise<AgentLLMResult> {
     const lastToolMessage = [...messages]
       .reverse()
@@ -129,13 +177,176 @@ class OfflineLLMService implements AgentLLMService {
     }
 
     return {
-      content:
-        "Gracias por tu mensaje. Actualmente estoy en modo de demostración sin conexión a un modelo de lenguaje: puedes preguntarme por productos o precios para que los consulte.",
+      content: `El proveedor ${this.provider} no tiene una API key configurada. Actualmente estoy en modo de demostración sin conexión a un modelo de lenguaje.`,
       toolCalls: [],
       finishReason: "stop",
     };
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* Configuration                                                              */
+/* -------------------------------------------------------------------------- */
+
+function getEnvValue(name: string): unknown {
+  return (env as unknown as Record<string, unknown>)[name];
+}
+
+function getEnvString(name: string): string | undefined {
+  const value = getEnvValue(name);
+
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function getEnvNumber(name: string): number | undefined {
+  const value = getEnvValue(name);
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  return undefined;
+}
+
+function normalizeProvider(provider: string | undefined): LLMProvider {
+  const normalized = provider?.trim().toLowerCase();
+
+  switch (normalized) {
+    case "google":
+    case "gemini":
+      return "google";
+
+    case "openai":
+      return "openai";
+
+    case "openrouter":
+      return "openrouter";
+
+    case undefined:
+    case "":
+      return "openai";
+
+    default:
+      throw new Error(`[llm-service] Unsupported LLM provider: ${provider}`);
+  }
+}
+
+function getProviderDefaults(provider: LLMProvider): {
+  model: string;
+  baseUrl: string;
+} {
+  switch (provider) {
+    case "google":
+      return {
+        model: DEFAULT_GOOGLE_MODEL,
+        baseUrl: DEFAULT_GOOGLE_BASE_URL,
+      };
+
+    case "openrouter":
+      return {
+        model: DEFAULT_OPENROUTER_MODEL,
+        baseUrl: DEFAULT_OPENROUTER_BASE_URL,
+      };
+
+    case "openai":
+    default:
+      return {
+        model: DEFAULT_OPENAI_MODEL,
+        baseUrl: DEFAULT_OPENAI_BASE_URL,
+      };
+  }
+}
+
+function resolveProvider(config: LLMServiceConfig): LLMProvider {
+  /*
+   * Explicit agent provider always wins.
+   *
+   * Only when the agent does not define a provider do we use
+   * env.llmProvider as the global default.
+   */
+  if (config.provider?.trim()) {
+    return normalizeProvider(config.provider);
+  }
+
+  return normalizeProvider(getEnvString("llmProvider") ?? "openai");
+}
+
+function resolveProviderValue(
+  provider: LLMProvider,
+  agentValue: string | undefined,
+  globalValue: string | undefined,
+  globalProvider: LLMProvider,
+  providerDefault: string,
+): string {
+  /*
+   * Agent configuration always wins.
+   */
+  if (agentValue?.trim()) {
+    return agentValue.trim();
+  }
+
+  /*
+   * Global model/baseUrl can only be inherited when the global
+   * provider is the same provider selected for this agent.
+   *
+   * This prevents an OpenAI global model/baseUrl from leaking
+   * into a Gemini agent.
+   */
+  if (globalProvider === provider && globalValue?.trim()) {
+    return globalValue.trim();
+  }
+
+  return providerDefault;
+}
+
+function resolveLLMConfig(config: LLMServiceConfig): ResolvedLLMConfig {
+  const provider = resolveProvider(config);
+
+  const globalProvider = normalizeProvider(
+    getEnvString("llmProvider") ?? "openai",
+  );
+
+  const providerDefaults = getProviderDefaults(provider);
+
+  const apiKey = config.apiKey?.trim() || getEnvString("llmApiKey");
+
+  const model = resolveProviderValue(
+    provider,
+    config.model,
+    getEnvString("llmModel"),
+    globalProvider,
+    providerDefaults.model,
+  );
+
+  const baseUrl = resolveProviderValue(
+    provider,
+    config.baseUrl,
+    getEnvString("llmBaseUrl"),
+    globalProvider,
+    providerDefaults.baseUrl,
+  );
+
+  const maxTokens =
+    config.maxTokens ?? getEnvNumber("llmMaxTokens") ?? DEFAULT_MAX_TOKENS;
+
+  const timeoutMs =
+    config.timeoutMs ??
+    getEnvNumber("llmRequestTimeoutMs") ??
+    DEFAULT_TIMEOUT_MS;
+
+  return {
+    provider,
+    apiKey,
+    model,
+    baseUrl,
+    maxTokens,
+    timeoutMs,
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Common OpenAI-compatible implementation                                    */
+/* -------------------------------------------------------------------------- */
 
 interface OpenAIResponseMessage {
   content?: string | null;
@@ -149,6 +360,20 @@ interface OpenAIResponseMessage {
   }>;
 }
 
+interface OpenAIResponse {
+  choices?: Array<{
+    message?: OpenAIResponseMessage;
+    finish_reason?: string;
+  }>;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+  };
+  error?: {
+    message?: string;
+  };
+}
+
 function serializeMessages(
   messages: AgentChatMessage[],
 ): Array<Record<string, unknown>> {
@@ -156,7 +381,7 @@ function serializeMessages(
     if (message.role === "assistant" && message.toolCalls?.length) {
       return {
         role: "assistant",
-        content: message.content,
+        content: message.content || null,
         tool_calls: message.toolCalls.map((toolCall) => ({
           id: toolCall.id,
           type: "function",
@@ -183,22 +408,26 @@ function serializeMessages(
   });
 }
 
-interface OpenAIResponse {
-  choices?: Array<{
-    message?: OpenAIResponseMessage;
-    finish_reason?: string;
-  }>;
-  usage?: {
-    prompt_tokens?: number;
-    completion_tokens?: number;
-  };
-  error?: {
-    message?: string;
-  };
+function serializeTools(
+  tools?: AgentToolDefinition[],
+): Array<Record<string, unknown>> | undefined {
+  if (!tools?.length) {
+    return undefined;
+  }
+
+  return tools.map((tool) => ({
+    type: "function",
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.parameters,
+    },
+  }));
 }
 
-class OpenAILLMService implements AgentLLMService {
+class OpenAICompatibleLLMService implements AgentLLMService {
   constructor(
+    private readonly provider: "openai" | "openrouter",
     private readonly apiKey: string,
     private readonly model: string,
     private readonly baseUrl: string,
@@ -215,6 +444,18 @@ class OpenAILLMService implements AgentLLMService {
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
     try {
+      const requestBody: Record<string, unknown> = {
+        model: this.model,
+        messages: serializeMessages(messages),
+        max_tokens: this.maxTokens,
+      };
+
+      const serializedTools = serializeTools(tools);
+
+      if (serializedTools?.length) {
+        requestBody.tools = serializedTools;
+      }
+
       const response = await fetch(
         `${this.baseUrl.replace(/\/$/, "")}/chat/completions`,
         {
@@ -223,19 +464,7 @@ class OpenAILLMService implements AgentLLMService {
             "Content-Type": "application/json",
             Authorization: `Bearer ${this.apiKey}`,
           },
-          body: JSON.stringify({
-            model: this.model,
-            messages: serializeMessages(messages),
-            tools: tools?.map((tool) => ({
-              type: "function",
-              function: {
-                name: tool.name,
-                description: tool.description,
-                parameters: tool.parameters,
-              },
-            })),
-            max_tokens: this.maxTokens,
-          }),
+          body: JSON.stringify(requestBody),
           signal: controller.signal,
         },
       );
@@ -244,75 +473,66 @@ class OpenAILLMService implements AgentLLMService {
 
       if (!response.ok) {
         throw new Error(
-          body.error?.message ?? `LLM request failed: ${response.status}`,
+          `[${this.provider}] ${
+            body.error?.message ??
+            `LLM request failed with status ${response.status}`
+          }`,
         );
       }
 
       const choice = body.choices?.[0];
 
       if (!choice) {
-        throw new Error("LLM returned no choices");
+        throw new Error(`[${this.provider}] LLM returned no choices`);
       }
 
       const message = choice.message;
 
-      return {
-        content: message?.content ?? "",
-        toolCalls: (message?.tool_calls ?? []).map((toolCall) => ({
+      const toolCalls = (message?.tool_calls ?? [])
+        .filter((toolCall) => toolCall.function?.name)
+        .map((toolCall) => ({
           id: toolCall.id,
           name: toolCall.function?.name ?? "",
           arguments: toolCall.function?.arguments ?? "{}",
-        })),
-        finishReason:
-          choice.finish_reason === "tool_calls"
-            ? "tool_calls"
-            : choice.finish_reason === "length"
-              ? "length"
-              : "stop",
+        }));
+
+      const finishReason =
+        toolCalls.length > 0 || choice.finish_reason === "tool_calls"
+          ? "tool_calls"
+          : choice.finish_reason === "length"
+            ? "length"
+            : "stop";
+
+      return {
+        content: message?.content ?? "",
+        toolCalls,
+        finishReason,
         usage: {
           promptTokens: body.usage?.prompt_tokens,
           completionTokens: body.usage?.completion_tokens,
         },
       };
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.name === "AbortError") {
+          throw new Error(
+            `[${this.provider}] LLM request timed out after ${this.timeoutMs}ms`,
+          );
+        }
+
+        throw error;
+      }
+
+      throw new Error(`[${this.provider}] Unknown LLM request error`);
     } finally {
       clearTimeout(timeout);
     }
   }
 }
 
-export interface LLMServiceConfig {
-  provider?: "openai" | "google" | "openrouter" | "custom";
-  apiKey?: string;
-  model?: string;
-  baseUrl?: string;
-  maxTokens?: number;
-  timeoutMs?: number;
-}
-
-function createOpenAILLMService(
-  config: Pick<
-    LLMServiceConfig,
-    "apiKey" | "model" | "baseUrl" | "maxTokens" | "timeoutMs"
-  >,
-): AgentLLMService {
-  const apiKey = config.apiKey?.trim();
-
-  if (!apiKey) {
-    console.warn(
-      "[llm-service] No API key configured for this agent. Using offline demo mode.",
-    );
-
-    return new OfflineLLMService();
-  }
-
-  return new OpenAILLMService(
-    apiKey,
-    config.model?.trim() || env.llmModel,
-    config.baseUrl?.trim() || env.llmBaseUrl,
-    config.maxTokens || env.llmMaxTokens,
-    config.timeoutMs || env.llmRequestTimeoutMs,
-  );
-}
+/* -------------------------------------------------------------------------- */
+/* Gemini                                                                     */
+/* -------------------------------------------------------------------------- */
 
 function sanitizeGeminiSchema(obj: unknown): unknown {
   if (obj === null || typeof obj !== "object") {
@@ -327,13 +547,197 @@ function sanitizeGeminiSchema(obj: unknown): unknown {
   const result: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(record)) {
-    if (key === "additionalProperties") {
+    /*
+     * Gemini's schema is not a drop-in copy of every JSON Schema keyword.
+     * In particular, additionalProperties should not be sent here.
+     */
+    if (
+      key === "additionalProperties" ||
+      key === "$schema" ||
+      key === "strict"
+    ) {
       continue;
     }
+
     result[key] = sanitizeGeminiSchema(value);
   }
 
   return result;
+}
+
+function serializeGeminiTools(
+  tools?: AgentToolDefinition[],
+): Array<Record<string, unknown>> | undefined {
+  if (!tools?.length) {
+    return undefined;
+  }
+
+  return [
+    {
+      functionDeclarations: tools.map((tool) => ({
+        name: tool.name,
+        description: tool.description,
+        parameters: sanitizeGeminiSchema(tool.parameters),
+      })),
+    },
+  ];
+}
+
+function parseToolArguments(argumentsValue: string): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(argumentsValue);
+
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+
+    return {};
+  } catch {
+    return {};
+  }
+}
+
+function parseToolResponse(content: string): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(content);
+
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+
+    return {
+      result: parsed,
+    };
+  } catch {
+    return {
+      result: content,
+    };
+  }
+}
+
+function findToolNameByCallId(
+  messages: AgentChatMessage[],
+  toolCallId: string | undefined,
+): string | undefined {
+  if (!toolCallId) {
+    return undefined;
+  }
+
+  for (let index = messages.length - 1; index >= 0; index--) {
+    const message = messages[index];
+
+    if (message.role !== "assistant" || !message.toolCalls?.length) {
+      continue;
+    }
+
+    const toolCall = message.toolCalls.find(
+      (candidate) => candidate.id === toolCallId,
+    );
+
+    if (toolCall) {
+      return toolCall.name;
+    }
+  }
+
+  return undefined;
+}
+
+function serializeGeminiContents(
+  messages: AgentChatMessage[],
+): Array<Record<string, unknown>> {
+  const contents: Array<Record<string, unknown>> = [];
+
+  for (const message of messages) {
+    if (message.role === "system") {
+      continue;
+    }
+
+    if (message.role === "assistant" && message.toolCalls?.length) {
+      contents.push({
+        role: "model",
+        parts: [
+          ...(message.content ? [{ text: message.content }] : []),
+          ...message.toolCalls.map((toolCall) => ({
+            functionCall: {
+              name: toolCall.name,
+              args: parseToolArguments(toolCall.arguments),
+              ...(toolCall.id ? { id: toolCall.id } : {}),
+            },
+          })),
+        ],
+      });
+
+      continue;
+    }
+
+    if (message.role === "tool") {
+      const functionName = findToolNameByCallId(messages, message.toolCallId);
+
+      if (!functionName) {
+        throw new Error(
+          `[google] Cannot resolve function name for tool call "${message.toolCallId ?? "unknown"}"`,
+        );
+      }
+
+      contents.push({
+        role: "user",
+        parts: [
+          {
+            functionResponse: {
+              name: functionName,
+              response: parseToolResponse(message.content),
+              ...(message.toolCallId ? { id: message.toolCallId } : {}),
+            },
+          },
+        ],
+      });
+
+      continue;
+    }
+
+    contents.push({
+      role: message.role === "assistant" ? "model" : "user",
+      parts: [
+        {
+          text: message.content,
+        },
+      ],
+    });
+  }
+
+  return contents;
+}
+
+interface GeminiPart {
+  text?: string;
+  functionCall?: {
+    id?: string;
+    name?: string;
+    args?: Record<string, unknown>;
+  };
+}
+
+interface GeminiResponse {
+  candidates?: Array<{
+    content?: {
+      role?: string;
+      parts?: GeminiPart[];
+    };
+    finishReason?: string;
+    finishMessage?: string;
+  }>;
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+  };
+  promptFeedback?: {
+    blockReason?: string;
+  };
+  error?: {
+    code?: number;
+    message?: string;
+    status?: string;
+  };
 }
 
 class GoogleGeminiLLMService implements AgentLLMService {
@@ -350,267 +754,221 @@ class GoogleGeminiLLMService implements AgentLLMService {
     tools?: AgentToolDefinition[],
   ): Promise<AgentLLMResult> {
     const controller = new AbortController();
+
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
     try {
-      let systemInstruction: string | undefined;
-      const contents: Array<Record<string, unknown>> = [];
+      const systemMessage = messages.find(
+        (message) => message.role === "system",
+      );
 
-      // Extract system instruction and map other roles
-      for (const message of messages) {
-        if (message.role === "system") {
-          systemInstruction = message.content;
-        } else if (message.role === "assistant" && message.toolCalls?.length) {
-          // Map assistant tool calls
-          contents.push({
-            role: "model",
-            parts: [
-              ...(message.content ? [{ text: message.content }] : []),
-              ...message.toolCalls.map((toolCall) => ({
-                functionCall: {
-                  name: toolCall.name,
-                  args: JSON.parse(toolCall.arguments),
-                },
-              })),
-            ],
-          });
-        } else if (message.role === "tool") {
-          // Parse string response into an object for Gemini API
-          let parsedResponse: Record<string, unknown>;
-          try {
-            parsedResponse =
-              typeof message.content === "string"
-                ? JSON.parse(message.content)
-                : message.content;
-          } catch {
-            parsedResponse = { result: message.content };
-          }
+      const requestBody: Record<string, unknown> = {
+        contents: serializeGeminiContents(messages),
+        generationConfig: {
+          maxOutputTokens: this.maxTokens,
+          temperature: 0.7,
+          topP: 1,
+          topK: 1,
+        },
+      };
 
-          // Map tool responses
-          contents.push({
-            role: "user",
-            parts: [
-              {
-                functionResponse: {
-                  name: message.toolCallId || "searchProducts",
-                  response: parsedResponse,
-                },
-              },
-            ],
-          });
-        } else {
-          // Map user and assistant (without tool calls) messages
-          contents.push({
-            role: message.role === "assistant" ? "model" : message.role,
-            parts: [{ text: message.content }],
-          });
-        }
-      }
-
-      const geminiTools = tools?.map((tool) => {
-        const cleanedParameters = sanitizeGeminiSchema(
-          tool.parameters,
-        ) as Record<string, unknown>;
-
-        return {
-          function_declarations: [
+      if (systemMessage?.content) {
+        requestBody.systemInstruction = {
+          parts: [
             {
-              name: tool.name,
-              description: tool.description,
-              parameters: cleanedParameters,
+              text: systemMessage.content,
             },
           ],
         };
-      });
-
-      const requestBody: Record<string, unknown> = {
-        contents: contents,
-        safety_settings: [
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-          {
-            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-            threshold: "BLOCK_NONE",
-          },
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-          {
-            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-            threshold: "BLOCK_NONE",
-          },
-        ],
-        generation_config: {
-          max_output_tokens: this.maxTokens,
-          temperature: 0.7,
-          top_p: 1,
-          top_k: 1,
-        },
-      };
-
-      if (systemInstruction) {
-        requestBody.system_instruction = {
-          parts: [{ text: systemInstruction }],
-        };
       }
 
-      if (geminiTools && geminiTools.length > 0) {
+      const geminiTools = serializeGeminiTools(tools);
+
+      if (geminiTools?.length) {
         requestBody.tools = geminiTools;
       }
 
-      const response = await fetch(
-        `${this.baseUrl.replace(/\/$/, "")}/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestBody),
-          signal: controller.signal,
-        },
-      );
+      const normalizedModel = this.model.startsWith("models/")
+        ? this.model.substring("models/".length)
+        : this.model;
 
-      const body = await response.json();
+      const endpoint =
+        `${this.baseUrl.replace(/\/$/, "")}` +
+        `/v1beta/models/${encodeURIComponent(normalizedModel)}` +
+        `:generateContent?key=${encodeURIComponent(this.apiKey)}`;
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
+
+      const body = (await response.json()) as GeminiResponse;
 
       if (!response.ok) {
         throw new Error(
-          body.error?.message ?? `LLM request failed: ${response.status}`,
+          `[google] ${
+            body.error?.message ??
+            `Gemini request failed with status ${response.status}`
+          }`,
         );
       }
 
-      const choice = body.candidates?.[0];
-
-      if (!choice) {
-        throw new Error("LLM returned no choices");
+      if (body.promptFeedback?.blockReason) {
+        throw new Error(
+          `[google] Gemini blocked the prompt: ${body.promptFeedback.blockReason}`,
+        );
       }
 
-      const parts = choice.content?.parts ?? [];
-      const textParts = parts
-        .filter((part: any) => part.text)
-        .map((part: any) => part.text)
+      const candidate = body.candidates?.[0];
+
+      if (!candidate) {
+        throw new Error("[google] Gemini returned no candidates");
+      }
+
+      const parts = candidate.content?.parts ?? [];
+
+      const content = parts
+        .filter((part) => typeof part.text === "string")
+        .map((part) => part.text)
         .join("");
+
       const toolCalls = parts
-        .filter((part: any) => part.functionCall)
-        .map((part: any) => ({
-          id: part.functionCall.name,
-          name: part.functionCall.name,
-          arguments: JSON.stringify(part.functionCall.args),
+        .filter(
+          (
+            part,
+          ): part is GeminiPart & {
+            functionCall: NonNullable<GeminiPart["functionCall"]>;
+          } => Boolean(part.functionCall?.name),
+        )
+        .map((part) => ({
+          id: part.functionCall.id ?? `gemini-${part.functionCall.name}`,
+          name: part.functionCall.name ?? "",
+          arguments: JSON.stringify(part.functionCall.args ?? {}),
         }));
 
-      const finishReason =
-        choice.finishReason === "STOP"
-          ? "stop"
-          : choice.finishReason === "MAX_TOKENS"
-            ? "length"
-            : "stop";
+      if (toolCalls.length > 0) {
+        return {
+          content,
+          toolCalls,
+          finishReason: "tool_calls",
+          usage: {
+            promptTokens: body.usageMetadata?.promptTokenCount,
+            completionTokens: body.usageMetadata?.candidatesTokenCount,
+          },
+        };
+      }
 
-      return {
-        content: textParts,
-        toolCalls: toolCalls,
-        finishReason: finishReason,
-        usage: {
-          promptTokens: body.usageMetadata?.promptTokenCount,
-          completionTokens: body.usageMetadata?.candidatesTokenCount,
-        },
-      };
+      switch (candidate.finishReason) {
+        case "STOP":
+        case undefined:
+          return {
+            content,
+            toolCalls: [],
+            finishReason: "stop",
+            usage: {
+              promptTokens: body.usageMetadata?.promptTokenCount,
+              completionTokens: body.usageMetadata?.candidatesTokenCount,
+            },
+          };
+
+        case "MAX_TOKENS":
+          return {
+            content,
+            toolCalls: [],
+            finishReason: "length",
+            usage: {
+              promptTokens: body.usageMetadata?.promptTokenCount,
+              completionTokens: body.usageMetadata?.candidatesTokenCount,
+            },
+          };
+
+        default:
+          throw new Error(
+            `[google] Gemini stopped with finishReason "${candidate.finishReason}"${
+              candidate.finishMessage ? `: ${candidate.finishMessage}` : ""
+            }`,
+          );
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.name === "AbortError") {
+          throw new Error(
+            `[google] Gemini request timed out after ${this.timeoutMs}ms`,
+          );
+        }
+
+        throw error;
+      }
+
+      throw new Error("[google] Unknown Gemini request error");
     } finally {
       clearTimeout(timeout);
     }
   }
 }
 
-function createGoogleGeminiLLMService(
-  config: Pick<
-    LLMServiceConfig,
-    "apiKey" | "model" | "baseUrl" | "maxTokens" | "timeoutMs"
-  >,
-): AgentLLMService {
-  const apiKey = config.apiKey?.trim();
+/* -------------------------------------------------------------------------- */
+/* Provider factory                                                           */
+/* -------------------------------------------------------------------------- */
 
-  if (!apiKey) {
+function createProviderService(config: ResolvedLLMConfig): AgentLLMService {
+  if (!config.apiKey) {
     console.warn(
-      "[llm-service] No Google API key configured for this agent. Using offline demo mode.",
+      `[llm-service] No API key configured for provider "${config.provider}". Using offline demo mode.`,
     );
 
-    return new OfflineLLMService();
+    return new OfflineLLMService(config.provider);
   }
 
-  const baseUrl =
-    config.baseUrl?.trim() || "https://generativelanguage.googleapis.com";
+  switch (config.provider) {
+    case "google":
+      return new GoogleGeminiLLMService(
+        config.apiKey,
+        config.model,
+        config.baseUrl,
+        config.maxTokens,
+        config.timeoutMs,
+      );
 
-  return new GoogleGeminiLLMService(
-    apiKey,
-    config.model?.trim() || env.llmModel,
-    baseUrl,
-    config.maxTokens || env.llmMaxTokens,
-    config.timeoutMs || env.llmRequestTimeoutMs,
-  );
-}
+    case "openrouter":
+      return new OpenAICompatibleLLMService(
+        "openrouter",
+        config.apiKey,
+        config.model,
+        config.baseUrl,
+        config.maxTokens,
+        config.timeoutMs,
+      );
 
-function createOpenRouterLLMService(
-  config: Pick<
-    LLMServiceConfig,
-    "apiKey" | "model" | "baseUrl" | "maxTokens" | "timeoutMs"
-  >,
-): AgentLLMService {
-  const apiKey = config.apiKey?.trim();
+    case "openai":
+      return new OpenAICompatibleLLMService(
+        "openai",
+        config.apiKey,
+        config.model,
+        config.baseUrl,
+        config.maxTokens,
+        config.timeoutMs,
+      );
 
-  if (!apiKey) {
-    console.warn(
-      "[llm-service] No OpenRouter API key configured for this agent. Using offline demo mode.",
-    );
-
-    return new OfflineLLMService();
+    default:
+      throw new Error(
+        `[llm-service] Unsupported LLM provider: ${config.provider}`,
+      );
   }
-
-  const baseUrl = config.baseUrl?.trim() || "https://openrouter.ai/api/v1";
-
-  return new OpenAILLMService(
-    apiKey,
-    config.model?.trim() || env.llmModel,
-    baseUrl,
-    config.maxTokens || env.llmMaxTokens,
-    config.timeoutMs || env.llmRequestTimeoutMs,
-  );
 }
+
+/* -------------------------------------------------------------------------- */
+/* Public factory                                                             */
+/* -------------------------------------------------------------------------- */
 
 export function createLLMService(
   config: LLMServiceConfig = {},
 ): AgentLLMService {
-  const provider = config.provider?.trim() || env.llmProvider || "openai";
+  const resolvedConfig = resolveLLMConfig(config);
 
-  if (!config.apiKey) {
-    console.warn(
-      `[llm-service] No API key configured for this agent. Using offline demo mode.`,
-    );
-
-    return new OfflineLLMService();
-  }
-
-  switch (provider) {
-    case "google":
-      return createGoogleGeminiLLMService({
-        apiKey: config.apiKey,
-        model: config.model,
-        baseUrl: config.baseUrl,
-        maxTokens: config.maxTokens,
-        timeoutMs: config.timeoutMs,
-      });
-
-    case "openrouter":
-      return createOpenRouterLLMService({
-        apiKey: config.apiKey,
-        model: config.model,
-        baseUrl: config.baseUrl,
-        maxTokens: config.maxTokens,
-        timeoutMs: config.timeoutMs,
-      });
-
-    case "openai":
-    default:
-      return createOpenAILLMService({
-        apiKey: config.apiKey,
-        model: config.model,
-        baseUrl: config.baseUrl,
-        maxTokens: config.maxTokens,
-        timeoutMs: config.timeoutMs,
-      });
-  }
+  return createProviderService(resolvedConfig);
 }
