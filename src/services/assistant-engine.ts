@@ -35,7 +35,9 @@ export interface AssistantDefinition {
   description: string;
   systemPrompt(ctx: AssistantContext): string;
   tools: AssistantTool[];
-  resolveLLM?(ctx: AssistantContext): AgentLLMService | Promise<AgentLLMService>;
+  resolveLLM?(
+    ctx: AssistantContext,
+  ): AgentLLMService | Promise<AgentLLMService>;
 }
 
 const assistantRegistry = new Map<string, AssistantDefinition>();
@@ -44,7 +46,9 @@ export function registerAssistant(definition: AssistantDefinition): void {
   assistantRegistry.set(definition.id, definition);
 }
 
-export function getAssistant(assistantId: string): AssistantDefinition | undefined {
+export function getAssistant(
+  assistantId: string,
+): AssistantDefinition | undefined {
   return assistantRegistry.get(assistantId);
 }
 
@@ -269,14 +273,13 @@ export async function processAssistantMessage(
     }
 
     if (!reply.trim()) {
-      reply =
-        "No pude completar la acción. Intenta reformular tu solicitud.";
+      reply = "No pude completar la acción. Intenta reformular tu solicitud.";
     }
   } catch (error) {
     console.error("[assistant-engine] error:", error);
 
     reply =
-      "Ocurrió un error al procesar tu mensaje. Intenta de nuevo en un momento.";
+      "No hay un proveedor de inteligencia artificial configurado en este momento. Por favor, contacta al administrador de la plataforma para activarlo.";
   }
 
   const replyContent = reply.trim();

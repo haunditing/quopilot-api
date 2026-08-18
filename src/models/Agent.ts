@@ -19,6 +19,7 @@ export type AgentTool =
   | "QUOTE_DETAILS"
   | "QUOTE_DRAFT"
   | "QUOTE_UPDATE"
+  | "QUOTE_ACCEPT"
   | "SALES_HISTORY"
   | "HUMAN_HANDOFF";
 
@@ -255,6 +256,7 @@ const agentSchema = new Schema<IAgent>(
         "QUOTE_DETAILS",
         "QUOTE_DRAFT",
         "QUOTE_UPDATE",
+        "QUOTE_ACCEPT",
         "SALES_HISTORY",
         "HUMAN_HANDOFF",
       ],

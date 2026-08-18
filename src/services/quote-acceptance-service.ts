@@ -8,9 +8,7 @@ export async function acceptQuote(tenantId: string, quoteId: string) {
   const session = await mongoose.startSession();
 
   try {
-    let result;
-
-    await session.withTransaction(async () => {
+    return await session.withTransaction(async () => {
       const quote = await Quote.findOne({
         _id: quoteId,
         tenantId,
@@ -18,6 +16,30 @@ export async function acceptQuote(tenantId: string, quoteId: string) {
 
       if (!quote) {
         throw new Error("Quote not found");
+      }
+
+      if (quote.status === "ACCEPTED") {
+        let sale = await Sale.findOne({ quoteId: quote._id }).session(session);
+        if (!sale) {
+          const saleSequence = await getNextSequence(tenantId, "SALE");
+          const saleNumber = `S-${String(saleSequence).padStart(6, "0")}`;
+          [sale] = await Sale.create(
+            [
+              {
+                tenantId: quote.tenantId,
+                customerId: quote.customerId,
+                quoteId: quote._id,
+                number: saleNumber,
+                total: quote.total,
+                currency: quote.currency,
+                status: "CONFIRMED",
+                soldAt: new Date(),
+              },
+            ],
+            { session },
+          );
+        }
+        return { quote, sale };
       }
 
       if (quote.status !== "SENT" && quote.status !== "VIEWED") {
@@ -56,13 +78,11 @@ export async function acceptQuote(tenantId: string, quoteId: string) {
         { session },
       );
 
-      result = {
+      return {
         quote,
         sale,
       };
     });
-
-    return result;
   } finally {
     await session.endSession();
   }

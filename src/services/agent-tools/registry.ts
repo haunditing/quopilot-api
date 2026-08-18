@@ -23,6 +23,7 @@ export const TOOL_CAPABILITY: Record<string, AgentToolCapability> = {
   getQuoteStatus: "QUOTE_DETAILS",
   createQuote: "QUOTE_DRAFT",
   updateQuote: "QUOTE_UPDATE",
+  acceptQuote: "QUOTE_ACCEPT",
   getSales: "SALES_HISTORY",
   updateCustomer: "CUSTOMER_UPDATE",
   requestHumanHandoff: "HUMAN_HANDOFF",

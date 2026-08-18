@@ -1,7 +1,9 @@
 import { Types } from "mongoose";
 import { getQuotes, getQuoteStatus } from "../../quote-query-service.js";
 import { createQuote, updateQuote } from "../../quote-service.js";
+import { acceptQuote } from "../../quote-acceptance-service.js";
 import { linkQuoteDraftToConversation } from "../../agent-conversation-service.js";
+import { ConversationState } from "../../../models/ConversationState.js";
 import {
   failResult,
   isProductAllowed,
@@ -351,9 +353,79 @@ export const updateQuoteTool: AgentTool = {
   },
 };
 
+function compactSale(sale: {
+  _id: Types.ObjectId;
+  number: string;
+  total: number;
+  currency: string;
+  status: string;
+  soldAt: Date;
+}) {
+  return {
+    id: sale._id.toString(),
+    number: sale.number,
+    total: sale.total,
+    currency: sale.currency,
+    status: sale.status,
+    soldAt: sale.soldAt,
+  };
+}
+
+export const acceptQuoteTool: AgentTool = {
+  name: "acceptQuote",
+  description:
+    "Acepta una cotización pendiente (SENT o VIEWED) del cliente, confirmando automáticamente la venta y cerrando el proceso de cotización activo.",
+  kind: "WRITE",
+  parameters: {
+    type: "object",
+    properties: {
+      quoteId: {
+        type: "string",
+        description: "ID de la cotización a aceptar",
+      },
+    },
+    required: ["quoteId"],
+    additionalProperties: false,
+  },
+
+  async execute(ctx: AgentToolContext, args) {
+    if (typeof args.quoteId !== "string" || !args.quoteId.trim()) {
+      return failResult("Invalid quoteId");
+    }
+
+    try {
+      const result = await acceptQuote(ctx.tenantId, args.quoteId);
+
+      await ConversationState.updateOne(
+        {
+          conversationId: new Types.ObjectId(ctx.conversationId),
+          tenantId: new Types.ObjectId(ctx.tenantId),
+        },
+        {
+          $set: {
+            "context.pendingAction": "NONE",
+            "context.quoteDraftId": null,
+          },
+        },
+        { upsert: true },
+      );
+
+      return okResult({
+        quote: compactQuote(result.quote),
+        sale: compactSale(result.sale),
+      });
+    } catch (error) {
+      return failResult(
+        error instanceof Error ? error.message : "Unable to accept quote",
+      );
+    }
+  },
+};
+
 export const quoteTools: AgentTool[] = [
   getQuotesTool,
   getQuoteStatusTool,
   createQuoteTool,
   updateQuoteTool,
+  acceptQuoteTool,
 ];
