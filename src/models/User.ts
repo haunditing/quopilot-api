@@ -39,6 +39,7 @@ const userSchema = new Schema<IUser>(
       required: true,
       trim: true,
       lowercase: true,
+      unique: true,
     },
 
     passwordHash: {
@@ -72,13 +73,4 @@ const userSchema = new Schema<IUser>(
   },
 );
 
-userSchema.index(
-  { tenantId: 1, email: 1 },
-  {
-    unique: true,
-    partialFilterExpression: {
-      tenantId: { $exists: true },
-    },
-  },
-);
 export const User = mongoose.model<IUser>("User", userSchema);
