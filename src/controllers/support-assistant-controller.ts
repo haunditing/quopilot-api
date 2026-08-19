@@ -198,9 +198,12 @@ export async function getSupportConfigController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
-  const tenantId = requireTenantContext(req, res);
+  const tenantId = req.query.tenantId as string | undefined;
 
   if (!tenantId) {
+    res.status(400).json({
+      message: "tenantId query parameter is required",
+    });
     return;
   }
 
@@ -238,9 +241,12 @@ export async function updateSupportConfigController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
-  const tenantId = requireTenantContext(req, res);
+  const tenantId = (req.body.tenantId ?? req.query.tenantId) as string | undefined;
 
   if (!tenantId) {
+    res.status(400).json({
+      message: "tenantId is required (in body or query)",
+    });
     return;
   }
 

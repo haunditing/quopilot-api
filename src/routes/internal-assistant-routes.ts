@@ -11,7 +11,7 @@ import "../services/internal-tenant-assistant.js";
 
 const router = Router();
 
-router.use(authenticate, authorize("TENANT_ADMIN"), requireTenant);
+router.use(authenticate, authorize("SUPER_ADMIN"), requireTenant);
 
 router.get(
   "/messages",
