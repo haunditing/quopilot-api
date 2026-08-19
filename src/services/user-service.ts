@@ -26,12 +26,10 @@ function assertValidId(id: string, field = "id"): void {
 }
 
 async function assertEmailAvailable(
-  tenantId: string,
   email: string,
   excludeUserId?: string,
 ): Promise<void> {
   const filter: Record<string, unknown> = {
-    tenantId,
     email: email.toLowerCase(),
   };
 
@@ -48,21 +46,37 @@ async function assertEmailAvailable(
   }
 }
 
+function isDuplicateKeyError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: unknown }).code === 11000
+  );
+}
+
 export async function createAgent(input: CreateAgentInput, tenantId: string) {
-  await assertEmailAvailable(tenantId, input.email);
+  await assertEmailAvailable(input.email);
 
   const passwordHash = await bcrypt.hash(input.password, 10);
 
-  const user = await User.create({
-    tenantId,
-    name: input.name,
-    email: input.email.toLowerCase(),
-    passwordHash,
-    role: AGENT_ROLE,
-    status: "ACTIVE",
-  });
+  try {
+    const user = await User.create({
+      tenantId,
+      name: input.name,
+      email: input.email.toLowerCase(),
+      passwordHash,
+      role: AGENT_ROLE,
+      status: "ACTIVE",
+    });
 
-  return user.toObject();
+    return user.toObject();
+  } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      throw new Error("A user with this email already exists");
+    }
+
+    throw error;
+  }
 }
 
 export async function getUsers(input: GetUsersInput) {
@@ -166,7 +180,7 @@ export async function updateUser(
   if (input.email) {
     const email = input.email.toLowerCase();
 
-    await assertEmailAvailable(tenantId, email, userId);
+    await assertEmailAvailable(email, userId);
 
     update.email = email;
   }
@@ -175,20 +189,30 @@ export async function updateUser(
     update.passwordHash = await bcrypt.hash(input.password, 10);
   }
 
-  const user = await User.findOneAndUpdate(
-    {
-      _id: new Types.ObjectId(userId),
-      tenantId: new Types.ObjectId(tenantId),
-      role: AGENT_ROLE,
-    },
-    update,
-    {
-      returnDocument: "after",
-      runValidators: true,
-    },
-  )
-    .select("-passwordHash")
-    .lean();
+  let user;
+
+  try {
+    user = await User.findOneAndUpdate(
+      {
+        _id: new Types.ObjectId(userId),
+        tenantId: new Types.ObjectId(tenantId),
+        role: AGENT_ROLE,
+      },
+      update,
+      {
+        returnDocument: "after",
+        runValidators: true,
+      },
+    )
+      .select("-passwordHash")
+      .lean();
+  } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      throw new Error("A user with this email already exists");
+    }
+
+    throw error;
+  }
 
   if (!user) {
     throw new Error("User not found");

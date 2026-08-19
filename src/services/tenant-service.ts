@@ -21,6 +21,14 @@ function assertValidTenantId(tenantId: string): void {
   }
 }
 
+function isDuplicateKeyError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: unknown }).code === 11000
+  );
+}
+
 export async function getTenants(input: GetTenantsInput) {
   const { page, limit, search, status } = input;
 
@@ -101,15 +109,23 @@ export async function createTenant(input: CreateTenantInput) {
 
   const passwordHash = await bcrypt.hash(input.password, 10);
 
-  await User.create({
-    tenantId: tenant._id,
-    name: input.adminName,
-    email: input.email.toLowerCase(),
-    passwordHash,
-    role: "TENANT_ADMIN",
-    status: "ACTIVE",
-    mustChangePassword: true,
-  });
+  try {
+    await User.create({
+      tenantId: tenant._id,
+      name: input.adminName,
+      email: input.email.toLowerCase(),
+      passwordHash,
+      role: "TENANT_ADMIN",
+      status: "ACTIVE",
+      mustChangePassword: true,
+    });
+  } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      throw new Error("A user with this email already exists");
+    }
+
+    throw error;
+  }
 
   return tenant.toObject();
 }
