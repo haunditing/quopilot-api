@@ -1,8 +1,9 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Document, Schema, Types } from "mongoose";
 
 export type SupportCaseStatus = "RESOLVED" | "VERIFIED";
 
 export interface ISupportCase extends Document {
+  tenantId: Types.ObjectId;
   title: string;
   module: string;
   problem: string;
@@ -16,6 +17,13 @@ export interface ISupportCase extends Document {
 
 const supportCaseSchema = new Schema<ISupportCase>(
   {
+    tenantId: {
+      type: Schema.Types.ObjectId,
+      ref: "Tenant",
+      required: true,
+      index: true,
+    },
+
     title: {
       type: String,
       required: true,
@@ -62,6 +70,7 @@ const supportCaseSchema = new Schema<ISupportCase>(
 );
 
 supportCaseSchema.index({
+  tenantId: 1,
   title: "text",
   problem: "text",
   solution: "text",

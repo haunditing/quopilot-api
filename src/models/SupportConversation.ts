@@ -3,6 +3,7 @@ import mongoose, { Document, Schema, Types } from "mongoose";
 export type SupportConversationStatus = "OPEN" | "CLOSED";
 
 export interface ISupportConversation extends Document {
+  tenantId: Types.ObjectId;
   userId: Types.ObjectId;
   assistantId: string;
   status: SupportConversationStatus;
@@ -13,6 +14,13 @@ export interface ISupportConversation extends Document {
 
 const supportConversationSchema = new Schema<ISupportConversation>(
   {
+    tenantId: {
+      type: Schema.Types.ObjectId,
+      ref: "Tenant",
+      required: true,
+      index: true,
+    },
+
     userId: {
       type: Schema.Types.ObjectId,
       ref: "User",
@@ -43,6 +51,7 @@ const supportConversationSchema = new Schema<ISupportConversation>(
 );
 
 supportConversationSchema.index({
+  tenantId: 1,
   userId: 1,
   assistantId: 1,
   status: 1,

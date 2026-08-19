@@ -1,8 +1,11 @@
 import mongoose from "mongoose";
 import { Tenant } from "../models/Tenant.js";
 import { User } from "../models/User.js";
+import { Quote } from "../models/Quote.js";
+import { Sale } from "../models/Sale.js";
+import { Product } from "../models/Product.js";
+import { Channel } from "../models/Channel.js";
 import { SupportAssistantConfig } from "../models/SupportAssistantConfig.js";
-import { getSuperAdminDashboardSummary } from "./super-admin-dashboard-service.js";
 
 export interface PlatformToolResult {
   ok: boolean;
@@ -18,99 +21,71 @@ function fail(message: string): PlatformToolResult {
   return { ok: false, message };
 }
 
-export async function getPlatformSummaryTool(): Promise<PlatformToolResult> {
+export async function getTenantSummaryTool(tenantId: string): Promise<PlatformToolResult> {
   try {
-    const summary = await getSuperAdminDashboardSummary();
+    const [tenant, userCount, agentCount, quoteCount, saleCount, productCount, channelCount] = await Promise.all([
+      Tenant.findById(tenantId).select("-createdAt -updatedAt -__v").lean(),
+      User.countDocuments({ tenantId }),
+      User.countDocuments({ tenantId, role: "AGENT" }),
+      Quote.countDocuments({ tenantId }),
+      Sale.countDocuments({ tenantId, status: "CONFIRMED" }),
+      Product.countDocuments({ tenantId, enabled: true }),
+      Channel.countDocuments({ tenantId }),
+    ]);
+
+    if (!tenant) {
+      return fail("Tenant no encontrado");
+    }
 
     return ok(
       {
-        tenants: {
-          total: summary.tenants.total,
-          active: summary.tenants.active,
-        },
-        users: {
-          total: summary.users.total,
-        },
-        quotes: {
-          total: summary.quotes.total,
-        },
-        sales: {
-          total: summary.sales.total,
-          amount: summary.sales.amount,
-        },
-      },
-      "Resumen de la plataforma obtenido",
-    );
-  } catch (error) {
-    return fail(
-      error instanceof Error ? error.message : "Unable to get platform summary",
-    );
-  }
-}
-
-export async function getTenantInfoTool(args: {
-  tenantId?: string;
-  search?: string;
-}): Promise<PlatformToolResult> {
-  const filter: Record<string, unknown> = {};
-
-  if (args.tenantId?.trim()) {
-    filter._id = args.tenantId.trim();
-  }
-
-  if (args.search?.trim()) {
-    const searchRegex = new RegExp(args.search.trim(), "i");
-    filter.$or = [
-      { name: searchRegex },
-      { email: searchRegex },
-      { taxId: searchRegex },
-    ];
-  }
-
-  try {
-    const tenants = await Tenant.find(filter)
-      .select("-createdAt -updatedAt -__v")
-      .limit(10)
-      .lean();
-
-    if (tenants.length === 0) {
-      return ok([], "No se encontraron tenants con esos criterios");
-    }
-
-    const compactTenants = await Promise.all(
-      tenants.map(async (tenant) => {
-        const [userCount, agentCount] = await Promise.all([
-          User.countDocuments({ tenantId: tenant._id }),
-          User.countDocuments({ tenantId: tenant._id, role: "AGENT" }),
-        ]);
-
-        return {
+        tenant: {
           id: tenant._id,
           name: tenant.name,
           status: tenant.status,
-          email: tenant.email,
-          taxId: tenant.taxId,
           currency: tenant.currency,
-          users: userCount,
-          agents: agentCount,
-        };
-      }),
-    );
-
-    return ok(
-      compactTenants,
-      `${compactTenants.length} tenant(s) encontrado(s)`,
+          timezone: tenant.timezone,
+        },
+        users: userCount,
+        agents: agentCount,
+        quotes: quoteCount,
+        sales: saleCount,
+        products: productCount,
+        channels: channelCount,
+      },
+      "Resumen del tenant obtenido",
     );
   } catch (error) {
     return fail(
-      error instanceof Error ? error.message : "Unable to get tenant info",
+      error instanceof Error ? error.message : "Unable to get tenant summary",
     );
   }
 }
 
-export async function getSystemStatusTool(): Promise<PlatformToolResult> {
+export async function getAgentConfigTool(tenantId: string): Promise<PlatformToolResult> {
   try {
-    const config = await SupportAssistantConfig.findOne().lean();
+    const config = await SupportAssistantConfig.findOne({ tenantId }).lean();
+
+    return ok(
+      {
+        status: config?.status ?? "ACTIVE",
+        llmConfigured: Boolean(config?.llm?.provider && config?.llm?.apiKey),
+        provider: config?.llm?.provider ?? null,
+        model: config?.llm?.model ?? null,
+        agentTools: config?.agentTools ?? [],
+      },
+      "Configuración del agente obtenida",
+    );
+  } catch (error) {
+    return fail(
+      error instanceof Error ? error.message : "Unable to get agent config",
+    );
+  }
+}
+
+export async function getSystemStatusTool(tenantId: string): Promise<PlatformToolResult> {
+  try {
+    const config = await SupportAssistantConfig.findOne({ tenantId }).lean();
     const llmConfigured = Boolean(
       config?.llm?.provider && config?.llm?.apiKey,
     );
@@ -145,21 +120,131 @@ export async function getSystemStatusTool(): Promise<PlatformToolResult> {
   }
 }
 
+export async function getQuotesTool(tenantId: string, args: { status?: string; limit?: number }): Promise<PlatformToolResult> {
+  try {
+    const filter: Record<string, unknown> = { tenantId };
+    if (args.status) filter.status = args.status;
+    const limit = args.limit ?? 10;
+
+    const quotes = await Quote.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .select("number customerId status total currency createdAt")
+      .lean();
+
+    return ok(quotes, `${quotes.length} cotización(es) encontrada(s)`);
+  } catch (error) {
+    return fail(
+      error instanceof Error ? error.message : "Unable to get quotes",
+    );
+  }
+}
+
+export async function getSalesTool(tenantId: string, args: { status?: string; limit?: number }): Promise<PlatformToolResult> {
+  try {
+    const filter: Record<string, unknown> = { tenantId };
+    if (args.status) filter.status = args.status;
+    const limit = args.limit ?? 10;
+
+    const sales = await Sale.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .select("number customerId status total currency createdAt")
+      .lean();
+
+    return ok(sales, `${sales.length} venta(s) encontrada(s)`);
+  } catch (error) {
+    return fail(
+      error instanceof Error ? error.message : "Unable to get sales",
+    );
+  }
+}
+
+export async function getProductsTool(tenantId: string, args: { search?: string; limit?: number }): Promise<PlatformToolResult> {
+  try {
+    const filter: Record<string, unknown> = { tenantId, enabled: true };
+    if (args.search?.trim()) {
+      const searchRegex = new RegExp(args.search.trim(), "i");
+      filter.$or = [
+        { name: searchRegex },
+        { sku: searchRegex },
+        { description: searchRegex },
+      ];
+    }
+    const limit = args.limit ?? 10;
+
+    const products = await Product.find(filter)
+      .limit(limit)
+      .select("name sku unitPrice currency stock description")
+      .lean();
+
+    return ok(products, `${products.length} producto(s) encontrado(s)`);
+  } catch (error) {
+    return fail(
+      error instanceof Error ? error.message : "Unable to get products",
+    );
+  }
+}
+
+export async function getCustomersTool(tenantId: string, args: { search?: string; limit?: number }): Promise<PlatformToolResult> {
+  try {
+    const filter: Record<string, unknown> = { tenantId };
+    if (args.search?.trim()) {
+      const searchRegex = new RegExp(args.search.trim(), "i");
+      filter.$or = [
+        { name: searchRegex },
+        { email: searchRegex },
+        { phone: searchRegex },
+      ];
+    }
+    const limit = args.limit ?? 10;
+
+    const customers = await (await import("../models/Customer.js")).Customer.find(filter)
+      .limit(limit)
+      .select("name email phone address taxId")
+      .lean();
+
+    return ok(customers, `${customers.length} cliente(s) encontrado(s)`);
+  } catch (error) {
+    return fail(
+      error instanceof Error ? error.message : "Unable to get customers",
+    );
+  }
+}
+
+export async function getChannelsTool(tenantId: string): Promise<PlatformToolResult> {
+  try {
+    const channels = await Channel.find({ tenantId })
+      .select("name type status config")
+      .lean();
+
+    return ok(channels, `${channels.length} canal(es) encontrado(s)`);
+  } catch (error) {
+    return fail(
+      error instanceof Error ? error.message : "Unable to get channels",
+    );
+  }
+}
+
 export const PLATFORM_TOOLS: Record<
   string,
-  (args: Record<string, unknown>) => Promise<PlatformToolResult>
+  (tenantId: string, args: Record<string, unknown>) => Promise<PlatformToolResult>
 > = {
-  getPlatformSummary: () => getPlatformSummaryTool(),
-  getTenantInfo: (args) =>
-    getTenantInfoTool(args as { tenantId?: string; search?: string }),
-  getSystemStatus: () => getSystemStatusTool(),
+  getTenantSummary: (tenantId) => getTenantSummaryTool(tenantId),
+  getAgentConfig: (tenantId) => getAgentConfigTool(tenantId),
+  getSystemStatus: (tenantId) => getSystemStatusTool(tenantId),
+  getQuotes: (tenantId, args) => getQuotesTool(tenantId, args),
+  getSales: (tenantId, args) => getSalesTool(tenantId, args),
+  getProducts: (tenantId, args) => getProductsTool(tenantId, args),
+  getCustomers: (tenantId, args) => getCustomersTool(tenantId, args),
+  getChannels: (tenantId) => getChannelsTool(tenantId),
 };
 
 export const PLATFORM_TOOL_DEFINITIONS = [
   {
-    name: "getPlatformSummary",
+    name: "getTenantSummary",
     description:
-      "Obtiene el resumen de la plataforma: total de tenants, usuarios, cotizaciones y ventas. No requiere argumentos.",
+      "Obtiene el resumen del tenant: nombre, estado, moneda, zona horaria, y conteos de usuarios, agentes, cotizaciones, ventas, productos y canales. No requiere argumentos.",
     parameters: {
       type: "object",
       properties: {},
@@ -167,15 +252,12 @@ export const PLATFORM_TOOL_DEFINITIONS = [
     },
   },
   {
-    name: "getTenantInfo",
+    name: "getAgentConfig",
     description:
-      "Consulta información real de uno o más tenants (empresas) por tenantId o búsqueda por nombre, email o NIT: estado, moneda y número de usuarios/agentes.",
+      "Obtiene la configuración del agente comercial: estado, proveedor LLM, y tools habilitadas según el plan. No requiere argumentos.",
     parameters: {
       type: "object",
-      properties: {
-        tenantId: { type: "string" },
-        search: { type: "string" },
-      },
+      properties: {},
       additionalProperties: false,
     },
   },
@@ -183,6 +265,68 @@ export const PLATFORM_TOOL_DEFINITIONS = [
     name: "getSystemStatus",
     description:
       "Obtiene el estado del sistema: conexión a la base de datos y si el proveedor de IA está configurado. No requiere argumentos.",
+    parameters: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "getQuotes",
+    description:
+      "Lista cotizaciones del tenant con filtros opcionales por estado y límite.",
+    parameters: {
+      type: "object",
+      properties: {
+        status: { type: "string" },
+        limit: { type: "number", minimum: 1, maximum: 50 },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "getSales",
+    description:
+      "Lista ventas del tenant con filtros opcionales por estado y límite.",
+    parameters: {
+      type: "object",
+      properties: {
+        status: { type: "string" },
+        limit: { type: "number", minimum: 1, maximum: 50 },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "getProducts",
+    description:
+      "Busca productos del tenant por término de búsqueda y límite.",
+    parameters: {
+      type: "object",
+      properties: {
+        search: { type: "string" },
+        limit: { type: "number", minimum: 1, maximum: 50 },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "getCustomers",
+    description:
+      "Busca clientes del tenant por término de búsqueda y límite.",
+    parameters: {
+      type: "object",
+      properties: {
+        search: { type: "string" },
+        limit: { type: "number", minimum: 1, maximum: 50 },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "getChannels",
+    description:
+      "Lista los canales configurados del tenant. No requiere argumentos.",
     parameters: {
       type: "object",
       properties: {},

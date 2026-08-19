@@ -23,6 +23,7 @@ import webhookRoutes from "./routes/webhook-routes.js";
 import conversationRoutes from "./routes/conversation-routes.js";
 import internalAssistantRoutes from "./routes/internal-assistant-routes.js";
 import supportAssistantRoutes from "./routes/support-assistant-routes.js";
+import superAdminSupportAssistantRoutes from "./routes/super-admin-support-assistant-routes.js";
 
 type RawBodyRequest = Request & {
   rawBody?: Buffer;
@@ -71,5 +72,6 @@ app.use("/api/webhooks", webhookRoutes);
 app.use("/api/conversations", conversationRoutes);
 app.use("/api/internal/assistant", internalAssistantRoutes);
 app.use("/api/support/assistant", supportAssistantRoutes);
+app.use("/api/super-admin/support/assistant", superAdminSupportAssistantRoutes);
 
 export default app;

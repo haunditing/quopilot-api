@@ -32,6 +32,23 @@ import {
   updateSupportCaseSchema,
 } from "../schemas/support-assistant-schema.js";
 
+function requireTenantContext(
+  req: AuthenticatedRequest,
+  res: Response,
+): string | null {
+  const tenantId = req.user?.tenantId;
+
+  if (!tenantId) {
+    res.status(403).json({
+      message: "Tenant context required",
+    });
+
+    return null;
+  }
+
+  return tenantId;
+}
+
 function requireUserId(req: AuthenticatedRequest, res: Response): string | null {
   const userId = req.user?.id;
 
@@ -50,6 +67,12 @@ export async function listSupportMessagesController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
+  const tenantId = requireTenantContext(req, res);
+
+  if (!tenantId) {
+    return;
+  }
+
   const userId = requireUserId(req, res);
 
   if (!userId) {
@@ -57,7 +80,7 @@ export async function listSupportMessagesController(
   }
 
   try {
-    const result = await getSupportMessages(userId);
+    const result = await getSupportMessages(tenantId, userId);
 
     res.status(200).json(result.messages);
   } catch (error) {
@@ -73,6 +96,12 @@ export async function sendSupportMessageController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
+  const tenantId = requireTenantContext(req, res);
+
+  if (!tenantId) {
+    return;
+  }
+
   const userId = requireUserId(req, res);
 
   if (!userId) {
@@ -92,6 +121,7 @@ export async function sendSupportMessageController(
 
   try {
     const { reply, conversationId, meta } = await processSupportMessage({
+      tenantId,
       userId,
       content: result.data.content,
     });
@@ -114,6 +144,12 @@ export async function resetSupportConversationController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
+  const tenantId = requireTenantContext(req, res);
+
+  if (!tenantId) {
+    return;
+  }
+
   const userId = requireUserId(req, res);
 
   if (!userId) {
@@ -121,7 +157,7 @@ export async function resetSupportConversationController(
   }
 
   try {
-    await resetSupportConversation(userId);
+    await resetSupportConversation(tenantId, userId);
 
     res.status(200).json({
       ok: true,
@@ -139,8 +175,14 @@ export async function getSupportMetricsController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
+  const tenantId = requireTenantContext(req, res);
+
+  if (!tenantId) {
+    return;
+  }
+
   try {
-    const metrics = await getSupportMetrics();
+    const metrics = await getSupportMetrics(tenantId);
 
     res.status(200).json(metrics);
   } catch (error) {
@@ -156,8 +198,14 @@ export async function getSupportConfigController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
+  const tenantId = requireTenantContext(req, res);
+
+  if (!tenantId) {
+    return;
+  }
+
   try {
-    const config = await getSupportAssistantConfig();
+    const config = await getSupportAssistantConfig(tenantId);
 
     res.status(200).json({
       status: config.status,
@@ -175,6 +223,7 @@ export async function getSupportConfigController(
       ragMinScore: config.ragMinScore,
       memoryWindow: config.memoryWindow,
       maxContextTokens: config.maxContextTokens,
+      agentTools: config.agentTools ?? [],
     });
   } catch (error) {
     console.error(error);
@@ -189,6 +238,12 @@ export async function updateSupportConfigController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
+  const tenantId = requireTenantContext(req, res);
+
+  if (!tenantId) {
+    return;
+  }
+
   const result = updateSupportAssistantConfigSchema.safeParse(req.body);
 
   if (!result.success) {
@@ -201,7 +256,7 @@ export async function updateSupportConfigController(
   }
 
   try {
-    await updateSupportAssistantConfig(result.data);
+    await updateSupportAssistantConfig(tenantId, result.data);
 
     res.status(200).json({
       ok: true,
@@ -219,8 +274,14 @@ export async function listKnowledgeDocsController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
+  const tenantId = requireTenantContext(req, res);
+
+  if (!tenantId) {
+    return;
+  }
+
   try {
-    const docs = await listKnowledgeDocs();
+    const docs = await listKnowledgeDocs(tenantId);
 
     res.status(200).json(docs);
   } catch (error) {
@@ -236,6 +297,12 @@ export async function createKnowledgeDocController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
+  const tenantId = requireTenantContext(req, res);
+
+  if (!tenantId) {
+    return;
+  }
+
   const result = createKnowledgeDocSchema.safeParse(req.body);
 
   if (!result.success) {
@@ -248,7 +315,7 @@ export async function createKnowledgeDocController(
   }
 
   try {
-    const doc = await createKnowledgeDoc(result.data);
+    const doc = await createKnowledgeDoc(tenantId, result.data);
 
     res.status(201).json(doc);
   } catch (error) {
@@ -264,6 +331,12 @@ export async function updateKnowledgeDocController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
+  const tenantId = requireTenantContext(req, res);
+
+  if (!tenantId) {
+    return;
+  }
+
   const docId = req.params.docId;
 
   if (typeof docId !== "string") {
@@ -283,7 +356,7 @@ export async function updateKnowledgeDocController(
   }
 
   try {
-    const doc = await updateKnowledgeDoc(docId, result.data);
+    const doc = await updateKnowledgeDoc(tenantId, docId, result.data);
 
     res.status(200).json(doc);
   } catch (error) {
@@ -302,6 +375,12 @@ export async function deleteKnowledgeDocController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
+  const tenantId = requireTenantContext(req, res);
+
+  if (!tenantId) {
+    return;
+  }
+
   const docId = req.params.docId;
 
   if (typeof docId !== "string") {
@@ -310,7 +389,7 @@ export async function deleteKnowledgeDocController(
   }
 
   try {
-    const result = await deleteKnowledgeDoc(docId);
+    const result = await deleteKnowledgeDoc(tenantId, docId);
 
     res.status(200).json(result);
   } catch (error) {
@@ -329,8 +408,14 @@ export async function listSupportCasesController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
+  const tenantId = requireTenantContext(req, res);
+
+  if (!tenantId) {
+    return;
+  }
+
   try {
-    const cases = await listSupportCases();
+    const cases = await listSupportCases(tenantId);
 
     res.status(200).json(cases);
   } catch (error) {
@@ -346,6 +431,12 @@ export async function createSupportCaseController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
+  const tenantId = requireTenantContext(req, res);
+
+  if (!tenantId) {
+    return;
+  }
+
   const result = createSupportCaseSchema.safeParse(req.body);
 
   if (!result.success) {
@@ -358,7 +449,7 @@ export async function createSupportCaseController(
   }
 
   try {
-    const caseDoc = await createSupportCase(result.data);
+    const caseDoc = await createSupportCase(tenantId, result.data);
 
     res.status(201).json(caseDoc);
   } catch (error) {
@@ -374,6 +465,12 @@ export async function updateSupportCaseController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
+  const tenantId = requireTenantContext(req, res);
+
+  if (!tenantId) {
+    return;
+  }
+
   const caseId = req.params.caseId;
 
   if (typeof caseId !== "string") {
@@ -393,7 +490,7 @@ export async function updateSupportCaseController(
   }
 
   try {
-    const caseDoc = await updateSupportCase(caseId, result.data);
+    const caseDoc = await updateSupportCase(tenantId, caseId, result.data);
 
     res.status(200).json(caseDoc);
   } catch (error) {
@@ -410,6 +507,12 @@ export async function confirmSupportCaseController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
+  const tenantId = requireTenantContext(req, res);
+
+  if (!tenantId) {
+    return;
+  }
+
   const caseId = req.params.caseId;
 
   if (typeof caseId !== "string") {
@@ -418,7 +521,7 @@ export async function confirmSupportCaseController(
   }
 
   try {
-    const caseDoc = await confirmSupportCase(caseId);
+    const caseDoc = await confirmSupportCase(tenantId, caseId);
 
     res.status(200).json(caseDoc);
   } catch (error) {
@@ -435,6 +538,12 @@ export async function deleteSupportCaseController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
+  const tenantId = requireTenantContext(req, res);
+
+  if (!tenantId) {
+    return;
+  }
+
   const caseId = req.params.caseId;
 
   if (typeof caseId !== "string") {
@@ -443,7 +552,7 @@ export async function deleteSupportCaseController(
   }
 
   try {
-    const result = await deleteSupportCase(caseId);
+    const result = await deleteSupportCase(tenantId, caseId);
 
     res.status(200).json(result);
   } catch (error) {

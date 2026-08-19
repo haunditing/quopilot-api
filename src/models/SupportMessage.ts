@@ -12,6 +12,7 @@ export interface SupportMessageMeta {
 }
 
 export interface ISupportMessage extends Document {
+  tenantId: Types.ObjectId;
   userId: Types.ObjectId;
   conversationId: Types.ObjectId;
   role: SupportMessageRole;
@@ -23,6 +24,13 @@ export interface ISupportMessage extends Document {
 
 const supportMessageSchema = new Schema<ISupportMessage>(
   {
+    tenantId: {
+      type: Schema.Types.ObjectId,
+      ref: "Tenant",
+      required: true,
+      index: true,
+    },
+
     userId: {
       type: Schema.Types.ObjectId,
       ref: "User",
@@ -70,6 +78,7 @@ const supportMessageSchema = new Schema<ISupportMessage>(
 );
 
 supportMessageSchema.index({
+  tenantId: 1,
   userId: 1,
   conversationId: 1,
   createdAt: 1,

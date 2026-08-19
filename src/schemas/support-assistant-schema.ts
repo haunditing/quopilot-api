@@ -19,6 +19,12 @@ const llmConfigSchema = z
   })
   .optional();
 
+const agentToolConfigSchema = z.object({
+    name: z.string().trim().min(1),
+    enabled: z.boolean(),
+    planRequired: z.array(z.string().trim().min(1)).optional(),
+  });
+
 export const updateSupportAssistantConfigSchema = z
   .object({
     status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
@@ -29,6 +35,7 @@ export const updateSupportAssistantConfigSchema = z
     ragMinScore: z.number().min(0).max(1).optional(),
     memoryWindow: z.number().int().min(2).max(30).optional(),
     maxContextTokens: z.number().int().min(500).max(20000).optional(),
+    agentTools: z.array(agentToolConfigSchema).optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one field must be provided",

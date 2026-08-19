@@ -59,13 +59,14 @@ function scoreCase(queryTokens: Set<string>, caseDoc: {
 }
 
 export async function searchCases(
+  tenantId: string,
   query: string,
   limit = 3,
   minScore = 0.5,
 ): Promise<CaseSearchResult[]> {
   const queryTokens = tokenize(query);
 
-  const cases = await SupportCase.find()
+  const cases = await SupportCase.find({ tenantId })
     .select("title module problem solution keywords confirmedCount")
     .lean();
 
@@ -89,15 +90,15 @@ export async function searchCases(
   return scored;
 }
 
-export async function listSupportCases() {
-  return SupportCase.find().sort({ createdAt: -1 }).lean();
+export async function listSupportCases(tenantId: string) {
+  return SupportCase.find({ tenantId }).sort({ createdAt: -1 }).lean();
 }
 
-export async function getSupportCase(caseId: string) {
-  return SupportCase.findById(caseId).lean();
+export async function getSupportCase(tenantId: string, caseId: string) {
+  return SupportCase.findOne({ tenantId, _id: caseId }).lean();
 }
 
-export async function createSupportCase(input: {
+export async function createSupportCase(tenantId: string, input: {
   title: string;
   module: string;
   problem: string;
@@ -106,6 +107,7 @@ export async function createSupportCase(input: {
   status?: "RESOLVED" | "VERIFIED";
 }) {
   const caseDoc = await SupportCase.create({
+    tenantId,
     title: input.title,
     module: input.module,
     problem: input.problem,
@@ -118,6 +120,7 @@ export async function createSupportCase(input: {
 }
 
 export async function updateSupportCase(
+  tenantId: string,
   caseId: string,
   input: {
     title?: string;
@@ -128,8 +131,8 @@ export async function updateSupportCase(
     status?: "RESOLVED" | "VERIFIED";
   },
 ) {
-  const caseDoc = await SupportCase.findByIdAndUpdate(
-    caseId,
+  const caseDoc = await SupportCase.findOneAndUpdate(
+    { tenantId, _id: caseId },
     {
       $set: input,
     },
@@ -146,9 +149,9 @@ export async function updateSupportCase(
   return caseDoc;
 }
 
-export async function confirmSupportCase(caseId: string) {
-  const caseDoc = await SupportCase.findByIdAndUpdate(
-    caseId,
+export async function confirmSupportCase(tenantId: string, caseId: string) {
+  const caseDoc = await SupportCase.findOneAndUpdate(
+    { tenantId, _id: caseId },
     {
       $inc: {
         confirmedCount: 1,
@@ -169,8 +172,8 @@ export async function confirmSupportCase(caseId: string) {
   return caseDoc;
 }
 
-export async function deleteSupportCase(caseId: string) {
-  const caseDoc = await SupportCase.findByIdAndDelete(caseId).lean();
+export async function deleteSupportCase(tenantId: string, caseId: string) {
+  const caseDoc = await SupportCase.findOneAndDelete({ tenantId, _id: caseId }).lean();
 
   if (!caseDoc) {
     throw new Error("Support case not found");

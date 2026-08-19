@@ -58,6 +58,7 @@ function scoreDoc(queryTokens: Set<string>, doc: {
 }
 
 export async function searchKnowledge(
+  tenantId: string,
   query: string,
   limit = 3,
   minScore = 0.3,
@@ -65,6 +66,7 @@ export async function searchKnowledge(
   const queryTokens = tokenize(query);
 
   const docs = await SupportKnowledgeDoc.find({
+    tenantId,
     enabled: true,
   })
     .select("title module summary content keywords")
@@ -89,15 +91,15 @@ export async function searchKnowledge(
   return scored;
 }
 
-export async function listKnowledgeDocs() {
-  return SupportKnowledgeDoc.find().sort({ createdAt: -1 }).lean();
+export async function listKnowledgeDocs(tenantId: string) {
+  return SupportKnowledgeDoc.find({ tenantId }).sort({ createdAt: -1 }).lean();
 }
 
-export async function getKnowledgeDoc(docId: string) {
-  return SupportKnowledgeDoc.findById(docId).lean();
+export async function getKnowledgeDoc(tenantId: string, docId: string) {
+  return SupportKnowledgeDoc.findOne({ tenantId, _id: docId }).lean();
 }
 
-export async function createKnowledgeDoc(input: {
+export async function createKnowledgeDoc(tenantId: string, input: {
   title: string;
   module: string;
   summary?: string;
@@ -106,6 +108,7 @@ export async function createKnowledgeDoc(input: {
   enabled?: boolean;
 }) {
   const doc = await SupportKnowledgeDoc.create({
+    tenantId,
     title: input.title,
     module: input.module,
     summary: input.summary ?? "",
@@ -118,6 +121,7 @@ export async function createKnowledgeDoc(input: {
 }
 
 export async function updateKnowledgeDoc(
+  tenantId: string,
   docId: string,
   input: {
     title?: string;
@@ -128,8 +132,8 @@ export async function updateKnowledgeDoc(
     enabled?: boolean;
   },
 ) {
-  const doc = await SupportKnowledgeDoc.findByIdAndUpdate(
-    docId,
+  const doc = await SupportKnowledgeDoc.findOneAndUpdate(
+    { tenantId, _id: docId },
     {
       $set: input,
     },
@@ -146,8 +150,8 @@ export async function updateKnowledgeDoc(
   return doc;
 }
 
-export async function deleteKnowledgeDoc(docId: string) {
-  const doc = await SupportKnowledgeDoc.findByIdAndDelete(docId).lean();
+export async function deleteKnowledgeDoc(tenantId: string, docId: string) {
+  const doc = await SupportKnowledgeDoc.findOneAndDelete({ tenantId, _id: docId }).lean();
 
   if (!doc) {
     throw new Error("Knowledge document not found");

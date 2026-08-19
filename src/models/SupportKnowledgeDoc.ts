@@ -1,6 +1,7 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Document, Schema, Types } from "mongoose";
 
 export interface ISupportKnowledgeDoc extends Document {
+  tenantId: Types.ObjectId;
   title: string;
   module: string;
   summary: string;
@@ -13,6 +14,13 @@ export interface ISupportKnowledgeDoc extends Document {
 
 const supportKnowledgeDocSchema = new Schema<ISupportKnowledgeDoc>(
   {
+    tenantId: {
+      type: Schema.Types.ObjectId,
+      ref: "Tenant",
+      required: true,
+      index: true,
+    },
+
     title: {
       type: String,
       required: true,
@@ -54,6 +62,7 @@ const supportKnowledgeDocSchema = new Schema<ISupportKnowledgeDoc>(
 );
 
 supportKnowledgeDocSchema.index({
+  tenantId: 1,
   title: "text",
   summary: "text",
   content: "text",

@@ -37,15 +37,25 @@ function parseToolArguments(raw: string): Record<string, unknown> {
   }
 }
 
-async function getOrCreateSupportConversation(userId: string) {
+function filterToolsByPlan(tools: Array<{ name: string; enabled: boolean; planRequired?: string[] }>, tenantPlan: string): Array<{ name: string; enabled: boolean; planRequired?: string[] }> {
+  return tools.filter((tool) => {
+    if (!tool.enabled) return false;
+    if (!tool.planRequired || tool.planRequired.length === 0) return true;
+    return tool.planRequired.includes(tenantPlan);
+  }).map(({ name, enabled }) => ({ name, enabled }));
+}
+
+async function getOrCreateSupportConversation(tenantId: string, userId: string) {
   const conversation = await SupportConversation.findOneAndUpdate(
     {
+      tenantId,
       userId,
       assistantId: SUPPORT_ASSISTANT_ID,
       status: "OPEN",
     },
     {
       $setOnInsert: {
+        tenantId,
         userId,
         assistantId: SUPPORT_ASSISTANT_ID,
         status: "OPEN",
@@ -96,7 +106,7 @@ function buildSystemPrompt(base: string, context: {
 
   if (context.toolBlock) {
     parts.push(
-      `\nDatos reales de la plataforma consultados en vivo (no inventes otros):\n${context.toolBlock}`,
+      `\nDatos reales del tenant consultados en vivo (no inventes otros):\n${context.toolBlock}`,
     );
   }
 
@@ -104,18 +114,20 @@ function buildSystemPrompt(base: string, context: {
 }
 
 export async function processSupportMessage(input: {
+  tenantId: string;
   userId: string;
   content: string;
 }) {
-  const { userId, content } = input;
+  const { tenantId, userId, content } = input;
 
-  const config = await getSupportAssistantConfig();
+  const config = await getSupportAssistantConfig(tenantId);
 
-  const conversation = await getOrCreateSupportConversation(userId);
+  const conversation = await getOrCreateSupportConversation(tenantId, userId);
 
   const conversationId = conversation._id.toString();
 
   await SupportMessage.create({
+    tenantId: new Types.ObjectId(tenantId),
     userId: new Types.ObjectId(userId),
     conversationId: conversation._id,
     role: "USER",
@@ -127,6 +139,7 @@ export async function processSupportMessage(input: {
       "El asistente de soporte está desactivado por un administrador. Consulta la documentación de QuoPilot o contacta al equipo de desarrollo.";
 
     await SupportMessage.create({
+      tenantId: new Types.ObjectId(tenantId),
       userId: new Types.ObjectId(userId),
       conversationId: conversation._id,
       role: "ASSISTANT",
@@ -150,16 +163,36 @@ export async function processSupportMessage(input: {
   if (scope.inScope && route.intent === "query") {
     const toolsToRun: string[] = [];
 
-    if (["platform", "tenants", "dashboard"].includes(route.module)) {
-      toolsToRun.push("getPlatformSummary");
+    if (["platform", "tenants", "dashboard", "quotes", "sales", "products", "customers", "channels"].includes(route.module)) {
+      toolsToRun.push("getTenantSummary");
     }
 
-    if (["tenants"].includes(route.module) || /tenant/i.test(content)) {
-      toolsToRun.push("getTenantInfo");
+    if (["agent", "configuracion", "settings"].includes(route.module) || /agente|config/.test(content)) {
+      toolsToRun.push("getAgentConfig");
     }
 
-    if (["platform", "api", "auth", "unknown"].includes(route.module)) {
+    if (["platform", "api", "auth", "system", "status"].includes(route.module)) {
       toolsToRun.push("getSystemStatus");
+    }
+
+    if (["quotes", "cotizaciones"].includes(route.module)) {
+      toolsToRun.push("getQuotes");
+    }
+
+    if (["sales", "ventas"].includes(route.module)) {
+      toolsToRun.push("getSales");
+    }
+
+    if (["products", "productos", "catalogo"].includes(route.module)) {
+      toolsToRun.push("getProducts");
+    }
+
+    if (["customers", "clientes"].includes(route.module)) {
+      toolsToRun.push("getCustomers");
+    }
+
+    if (["channels", "canales"].includes(route.module)) {
+      toolsToRun.push("getChannels");
     }
 
     for (const toolName of toolsToRun) {
@@ -167,7 +200,7 @@ export async function processSupportMessage(input: {
 
       if (tool) {
         try {
-          const result = await tool({});
+          const result = await tool(tenantId, {});
 
           if (result.ok) {
             toolResults.push({ name: toolName, data: result.data });
@@ -181,7 +214,7 @@ export async function processSupportMessage(input: {
 
   const caseResults =
     scope.inScope && route.intent !== "greeting"
-      ? await searchCases(content, 1, config.caseThreshold)
+      ? await searchCases(tenantId, content, 1, config.caseThreshold)
       : [];
 
   const bestCase = caseResults[0] ?? null;
@@ -190,7 +223,7 @@ export async function processSupportMessage(input: {
     scope.inScope &&
     !bestCase &&
     route.intent !== "greeting"
-      ? await searchKnowledge(content, config.ragMaxDocs, config.ragMinScore)
+      ? await searchKnowledge(tenantId, content, config.ragMaxDocs, config.ragMinScore)
       : [];
 
   const caseBlock = bestCase
@@ -242,6 +275,7 @@ export async function processSupportMessage(input: {
   );
 
   const recent = await SupportMessage.find({
+    tenantId,
     userId,
     conversationId: conversation._id,
   })
@@ -267,11 +301,17 @@ export async function processSupportMessage(input: {
     })),
   ];
 
-  const tools = PLATFORM_TOOL_DEFINITIONS.map((tool) => ({
-    name: tool.name,
-    description: tool.description,
-    parameters: tool.parameters,
-  }));
+  const enabledToolNames = config.agentTools
+    .filter((t) => t.enabled)
+    .map((t) => t.name);
+
+  const tools = PLATFORM_TOOL_DEFINITIONS
+    .filter((tool) => enabledToolNames.includes(tool.name))
+    .map((tool) => ({
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.parameters,
+    }));
 
   let reply = "";
   let iterations = 0;
@@ -303,7 +343,7 @@ export async function processSupportMessage(input: {
           };
         } else {
           try {
-            toolResult = await tool(parseToolArguments(toolCall.arguments));
+            toolResult = await tool(tenantId, parseToolArguments(toolCall.arguments));
           } catch (error) {
             toolResult = {
               ok: false,
@@ -344,6 +384,7 @@ export async function processSupportMessage(input: {
   const finalReply = guarded.content;
 
   await SupportMessage.create({
+    tenantId: new Types.ObjectId(tenantId),
     userId: new Types.ObjectId(userId),
     conversationId: conversation._id,
     role: "ASSISTANT",
@@ -377,10 +418,11 @@ export async function processSupportMessage(input: {
   };
 }
 
-export async function getSupportMessages(userId: string) {
-  const conversation = await getOrCreateSupportConversation(userId);
+export async function getSupportMessages(tenantId: string, userId: string) {
+  const conversation = await getOrCreateSupportConversation(tenantId, userId);
 
   const messages = await SupportMessage.find({
+    tenantId,
     userId,
     conversationId: conversation._id,
   })
@@ -393,10 +435,11 @@ export async function getSupportMessages(userId: string) {
   };
 }
 
-export async function resetSupportConversation(userId: string) {
-  const conversation = await getOrCreateSupportConversation(userId);
+export async function resetSupportConversation(tenantId: string, userId: string) {
+  const conversation = await getOrCreateSupportConversation(tenantId, userId);
 
   await SupportMessage.deleteMany({
+    tenantId,
     userId,
     conversationId: conversation._id,
   });
@@ -409,12 +452,12 @@ export async function resetSupportConversation(userId: string) {
   return { reset: true };
 }
 
-export async function getSupportMetrics() {
+export async function getSupportMetrics(tenantId: string) {
   const [openConversations, totalMessages, cases, docs] = await Promise.all([
-    SupportConversation.countDocuments({ status: "OPEN" }),
-    SupportMessage.countDocuments(),
-    listSupportCases(),
-    listKnowledgeDocs(),
+    SupportConversation.countDocuments({ tenantId, status: "OPEN" }),
+    SupportMessage.countDocuments({ tenantId }),
+    listSupportCases(tenantId),
+    listKnowledgeDocs(tenantId),
   ]);
 
   return {
