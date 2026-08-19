@@ -1,6 +1,6 @@
 import type { Response } from "express";
 import { AuthenticatedRequest } from "../middleware/auth-middleware.js";
-import { deleteSale } from "../services/sale-service.js";
+import { cancelSale, deleteSale } from "../services/sale-service.js";
 import { getSaleDetail, getSales } from "../services/sale-query-service.js";
 
 function handleSaleError(
@@ -25,6 +25,14 @@ function handleSaleError(
     message === "Invalid saleId"
   ) {
     res.status(400).json({
+      message,
+    });
+
+    return;
+  }
+
+  if (message === "Only cancelled sales can be deleted") {
+    res.status(409).json({
       message,
     });
 
@@ -209,5 +217,63 @@ export async function deleteSaleController(
     res.status(204).send();
   } catch (error) {
     handleSaleError(res, error, "Unable to delete sale");
+  }
+}
+
+export async function cancelSaleController(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  const tenantId = req.user?.tenantId;
+
+  if (!tenantId) {
+    res.status(403).json({
+      message: "Tenant context required",
+    });
+
+    return;
+  }
+
+  const saleId = req.params.saleId;
+
+  if (typeof saleId !== "string") {
+    res.status(400).json({
+      message: "Invalid saleId",
+    });
+
+    return;
+  }
+
+  try {
+    const sale = await cancelSale(tenantId, saleId);
+
+    res.status(200).json({ sale });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unable to cancel sale";
+
+    if (message === "Sale not found") {
+      res.status(404).json({ message });
+      return;
+    }
+
+    if (
+      message === "Invalid tenantId" ||
+      message === "Invalid saleId"
+    ) {
+      res.status(400).json({ message });
+      return;
+    }
+
+    if (message.startsWith("Sale cannot be cancelled")) {
+      res.status(409).json({ message });
+      return;
+    }
+
+    console.error(error);
+
+    res.status(500).json({
+      message: "Unable to cancel sale",
+    });
   }
 }

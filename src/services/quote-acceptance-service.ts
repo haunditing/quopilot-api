@@ -1,8 +1,50 @@
-import mongoose from "mongoose";
-import { Quote } from "../models/Quote.js";
+import mongoose, { ClientSession } from "mongoose";
+import { Quote, type IQuote } from "../models/Quote.js";
 import { Sale } from "../models/Sale.js";
 import { getNextSequence } from "./sequence-service.js";
 import { createQuoteEvent } from "./quote-event-service.js";
+import { createSaleEvent } from "./sale-event-service.js";
+
+async function createSaleFromQuote(
+  quote: IQuote,
+  tenantId: string,
+  session: ClientSession,
+) {
+  const saleSequence = await getNextSequence(tenantId, "SALE", session);
+  const saleNumber = `S-${String(saleSequence).padStart(6, "0")}`;
+
+  const [sale] = await Sale.create(
+    [
+      {
+        tenantId: quote.tenantId,
+        customerId: quote.customerId,
+        quoteId: quote._id,
+        documentType: "SALE",
+        number: saleNumber,
+        items: quote.items,
+        subtotal: quote.subtotal,
+        totalDiscount: quote.totalDiscount,
+        totalTax: quote.totalTax,
+        total: quote.total,
+        currency: quote.currency,
+        status: "CONFIRMED",
+        soldAt: new Date(),
+        notes: quote.notes,
+        terms: quote.terms,
+      },
+    ],
+    { session },
+  );
+
+  await createSaleEvent({
+    tenantId,
+    saleId: sale._id.toString(),
+    type: "CREATED",
+    session,
+  });
+
+  return sale;
+}
 
 export async function acceptQuote(tenantId: string, quoteId: string) {
   const session = await mongoose.startSession();
@@ -21,29 +63,7 @@ export async function acceptQuote(tenantId: string, quoteId: string) {
       if (quote.status === "ACCEPTED") {
         let sale = await Sale.findOne({ quoteId: quote._id }).session(session);
         if (!sale) {
-          const saleSequence = await getNextSequence(tenantId, "SALE");
-          const saleNumber = `S-${String(saleSequence).padStart(6, "0")}`;
-          [sale] = await Sale.create(
-            [
-              {
-                tenantId: quote.tenantId,
-                customerId: quote.customerId,
-                quoteId: quote._id,
-                documentType: "SALE",
-                number: saleNumber,
-                items: quote.items,
-                subtotal: quote.subtotal,
-                totalDiscount: quote.totalDiscount,
-                totalTax: quote.totalTax,
-                total: quote.total,
-                currency: quote.currency,
-                status: "DRAFT",
-                notes: quote.notes,
-                terms: quote.terms,
-              },
-            ],
-            { session },
-          );
+          sale = await createSaleFromQuote(quote, tenantId, session);
         }
         return { quote, sale };
       }
@@ -64,30 +84,7 @@ export async function acceptQuote(tenantId: string, quoteId: string) {
         session,
       });
 
-      const saleSequence = await getNextSequence(tenantId, "SALE");
-
-      const saleNumber = `S-${String(saleSequence).padStart(6, "0")}`;
-
-      const [sale] = await Sale.create(
-        [
-          {
-            tenantId: quote.tenantId,
-            customerId: quote.customerId,
-            quoteId: quote._id,
-            items: quote.items,
-            number: saleNumber,
-            total: quote.total,
-            subtotal: quote.subtotal,
-            totalDiscount: quote.totalDiscount,
-            totalTax: quote.totalTax,
-            currency: quote.currency,
-            status: "DRAFT",
-            notes: quote.notes,
-            terms: quote.terms,
-          },
-        ],
-        { session },
-      );
+      const sale = await createSaleFromQuote(quote, tenantId, session);
 
       return {
         quote,

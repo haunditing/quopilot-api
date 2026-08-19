@@ -2,6 +2,7 @@ import { Types } from "mongoose";
 import { Customer } from "../models/Customer.js";
 import { Quote } from "../models/Quote.js";
 import { Sale } from "../models/Sale.js";
+import { SaleEvent } from "../models/SaleEvent.js";
 import { Conversation } from "../models/Conversation.js";
 
 interface GetSalesInput {
@@ -164,7 +165,7 @@ export async function getSaleDetail(tenantId: string, saleId: string) {
     throw new Error("Sale not found");
   }
 
-  const [quote, customer] = await Promise.all([
+  const [quote, customer, events] = await Promise.all([
     Quote.findOne({
       _id: sale.quoteId,
       tenantId: tenantObjectId,
@@ -174,11 +175,19 @@ export async function getSaleDetail(tenantId: string, saleId: string) {
       _id: sale.customerId,
       tenantId: tenantObjectId,
     }).lean(),
+
+    SaleEvent.find({
+      saleId: sale._id,
+      tenantId: tenantObjectId,
+    })
+      .sort({ createdAt: 1 })
+      .lean(),
   ]);
 
   return {
     sale,
     quote,
     customer,
+    events,
   };
 }

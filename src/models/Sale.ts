@@ -1,12 +1,6 @@
 import mongoose, { Document, Schema, Types } from "mongoose";
 
-export type SaleStatus =
-  | "DRAFT"
-  | "SENT"
-  | "VIEWED"
-  | "ACCEPTED"
-  | "REJECTED"
-  | "EXPIRED";
+export type SaleStatus = "CONFIRMED" | "CANCELLED";
 
 export interface ISaleItem {
   productId: Types.ObjectId;
@@ -42,10 +36,7 @@ export interface ISale extends Document {
   notes?: string;
   terms?: string;
 
-  sentAt?: Date;
-  viewedAt?: Date;
-  acceptedAt?: Date;
-  rejectedAt?: Date;
+  soldAt: Date;
 
   createdAt: Date;
   updatedAt: Date;
@@ -200,8 +191,8 @@ const saleSchema = new Schema<ISale>(
 
     status: {
       type: String,
-      enum: ["DRAFT", "SENT", "VIEWED", "ACCEPTED", "REJECTED", "EXPIRED"],
-      default: "DRAFT",
+      enum: ["CONFIRMED", "CANCELLED"],
+      default: "CONFIRMED",
     },
 
     notes: {
@@ -214,20 +205,10 @@ const saleSchema = new Schema<ISale>(
       trim: true,
     },
 
-    sentAt: {
+    soldAt: {
       type: Date,
-    },
-
-    viewedAt: {
-      type: Date,
-    },
-
-    acceptedAt: {
-      type: Date,
-    },
-
-    rejectedAt: {
-      type: Date,
+      required: true,
+      default: () => new Date(),
     },
   },
   {
@@ -249,6 +230,11 @@ saleSchema.index({
   tenantId: 1,
   customerId: 1,
   createdAt: -1,
+});
+
+saleSchema.index({
+  tenantId: 1,
+  soldAt: -1,
 });
 
 saleSchema.index({

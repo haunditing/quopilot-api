@@ -5,7 +5,8 @@ export type SaleEventType =
   | "SENT"
   | "VIEWED"
   | "ACCEPTED"
-  | "REJECTED";
+  | "REJECTED"
+  | "CANCELLED";
 
 export interface ISaleEvent extends Document {
   tenantId: Types.ObjectId;
@@ -32,7 +33,7 @@ const saleEventSchema = new Schema<ISaleEvent>(
 
     type: {
       type: String,
-      enum: ["CREATED", "SENT", "VIEWED", "ACCEPTED", "REJECTED"],
+      enum: ["CREATED", "SENT", "VIEWED", "ACCEPTED", "REJECTED", "CANCELLED"],
       required: true,
     },
   },

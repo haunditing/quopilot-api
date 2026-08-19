@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  cancelSaleController,
   deleteSaleController,
   getSaleController,
   getSalesController,
@@ -12,6 +13,13 @@ const router = Router();
 router.get("/", authenticate, requireTenant, getSalesController);
 
 router.get("/:saleId", authenticate, requireTenant, getSaleController);
+
+router.post(
+  "/:saleId/cancel",
+  authenticate,
+  requireTenant,
+  cancelSaleController,
+);
 
 router.delete("/:saleId", authenticate, requireTenant, deleteSaleController);
 
