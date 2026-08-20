@@ -32,6 +32,8 @@ import {
   getAllToolPermissions,
   getToolPermissionsForPrompt,
 } from "./assistant-capabilities-service.js";
+import { getPlanEnabledFeatures } from "./plan-service.js";
+import type { AIToolAction } from "../models/AIAssistantTool.js";
 
 function parseToolArguments(raw: string): Record<string, unknown> {
   try {
@@ -51,7 +53,34 @@ const TOOL_TO_ASSISTANT_KEY: Record<string, string> = {
   getProducts: "tools_products",
   getCustomers: "tools_customers",
   getChannels: "tools_channels",
+  getReports: "tools_reports",
+  getIntegrations: "tools_integrations",
+  getSettings: "tools_settings",
 };
+
+// Map herramienta IA -> funcionalidad general de QuoPilot (Nivel 1).
+// tools_knowledge y tools_cases son específicos del asistente y no dependen
+// de una funcionalidad general de la aplicación.
+const ASSISTANT_TOOL_FEATURE_MAP: Record<string, string> = {
+  tools_dashboard: "dashboard",
+  tools_customers: "customers",
+  tools_products: "products",
+  tools_quotes: "quotes",
+  tools_sales: "sales",
+  tools_channels: "channels",
+  tools_agent: "agent",
+  tools_reports: "reports",
+  tools_integrations: "integrations",
+  tools_settings: "settings",
+  tools_knowledge: "",
+  tools_cases: "",
+};
+
+// Todas las herramientas de plataforma actuales son de solo lectura (get*),
+// por lo que la acción requerida para ejecutarlas es "consult".
+const TOOL_REQUIRED_ACTION: Record<string, AIToolAction> = Object.fromEntries(
+  Object.keys(PLATFORM_TOOLS).map((name) => [name, "consult" as AIToolAction]),
+);
 
 async function getTenantPlan(tenantId: string): Promise<string> {
   const tenant = await Tenant.findById(tenantId).select("plan").lean();
@@ -192,13 +221,23 @@ export async function processSupportMessage(input: {
   const assistantCapabilities = await getAssistantCapabilities(tenantPlan);
   const toolPermissions = assistantCapabilities.toolPermissions ?? [];
 
+  // Nivel 1: funcionalidades generales habilitadas para el plan del tenant
+  const enabledFeatures = new Set(await getPlanEnabledFeatures(tenantPlan));
+
+  // Autorización efectiva = feature habilitada (Nivel 1) AND capacidad del
+  // asistente permitida para esa acción (Nivel 2). La restricción se aplica
+  // en backend: el LLM solo ve y solo puede invocar herramientas autorizadas.
   const allowedTools = Object.entries(PLATFORM_TOOLS)
-    .map(([name, fn]) => {
+    .map(([name]) => {
       const toolKey = TOOL_TO_ASSISTANT_KEY[name];
       if (!toolKey) return null;
 
+      const featureKey = ASSISTANT_TOOL_FEATURE_MAP[toolKey];
+      if (featureKey && !enabledFeatures.has(featureKey)) return null;
+
+      const requiredAction = TOOL_REQUIRED_ACTION[name] ?? "consult";
       const perm = toolPermissions.find((p) => p.toolKey === toolKey);
-      if (!perm || perm.allowedActions.length === 0) return null;
+      if (!perm || !perm.allowedActions.includes(requiredAction)) return null;
 
       return {
         name,
@@ -241,6 +280,15 @@ export async function processSupportMessage(input: {
     }
     if (["channels", "canales"].includes(route.module)) {
       toolsToRun.push("getChannels");
+    }
+    if (["dashboard", "platform", "tenants"].includes(route.module) || /reporte|reportes|resumen|m[eé]tricas|estad[ií]sticas/.test(content)) {
+      toolsToRun.push("getReports");
+    }
+    if (["api"].includes(route.module) || /integraci[oó]n|integraciones|api key|webhook|conectar/.test(content)) {
+      toolsToRun.push("getIntegrations");
+    }
+    if (["settings", "configuracion"].includes(route.module) || /moneda|zona horaria|branding|logo|pol[ií]tica comercial/.test(content)) {
+      toolsToRun.push("getSettings");
     }
 
     for (const toolName of toolsToRun) {

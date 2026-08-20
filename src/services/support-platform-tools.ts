@@ -225,6 +225,117 @@ export async function getChannelsTool(tenantId: string): Promise<PlatformToolRes
   }
 }
 
+export async function getReportsTool(tenantId: string): Promise<PlatformToolResult> {
+  try {
+    const [quoteStats, saleStats, topProducts] = await Promise.all([
+      Quote.aggregate([
+        { $match: { tenantId: new mongoose.Types.ObjectId(tenantId) } },
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+      ]),
+      Sale.aggregate([
+        { $match: { tenantId: new mongoose.Types.ObjectId(tenantId) } },
+        {
+          $group: {
+            _id: "$status",
+            count: { $sum: 1 },
+            total: { $sum: "$total" },
+          },
+        },
+      ]),
+      Sale.aggregate([
+        { $match: { tenantId: new mongoose.Types.ObjectId(tenantId) } },
+        { $unwind: "$items" },
+        {
+          $group: {
+            _id: "$items.name",
+            quantity: { $sum: "$items.quantity" },
+            revenue: { $sum: "$items.totalLine" },
+          },
+        },
+        { $sort: { quantity: -1 } },
+        { $limit: 5 },
+      ]),
+    ]);
+
+    return ok(
+      {
+        quotesByStatus: Object.fromEntries(
+          quoteStats.map((s) => [s._id, s.count]),
+        ),
+        salesByStatus: Object.fromEntries(
+          saleStats.map((s) => [s._id, { count: s.count, total: s.total }]),
+        ),
+        topProducts,
+      },
+      "Reporte del tenant obtenido",
+    );
+  } catch (error) {
+    return fail(
+      error instanceof Error ? error.message : "Unable to get reports",
+    );
+  }
+}
+
+export async function getIntegrationsTool(tenantId: string): Promise<PlatformToolResult> {
+  try {
+    const channels = await Channel.find({ tenantId })
+      .select("name type status config credentials")
+      .lean();
+
+    const integrations = channels.map((ch) => ({
+      name: ch.name,
+      type: ch.type,
+      status: ch.status,
+      configured: Boolean(ch.credentials?.accessToken),
+      webhookConfigured: Boolean(ch.credentials?.webhookSecret || ch.credentials?.verifyToken),
+      phoneNumber: ch.config?.phoneNumber ?? null,
+    }));
+
+    return ok(integrations, `${integrations.length} integración(es) encontrada(s)`);
+  } catch (error) {
+    return fail(
+      error instanceof Error ? error.message : "Unable to get integrations",
+    );
+  }
+}
+
+export async function getSettingsTool(tenantId: string): Promise<PlatformToolResult> {
+  try {
+    const [tenant, assistantConfig] = await Promise.all([
+      Tenant.findById(tenantId)
+        .select("currency timezone decimalPrecision thousandsSeparator decimalSeparator brandColor logoUrl documentLogoUrl footerText")
+        .lean(),
+      SupportAssistantConfig.findOne().lean(),
+    ]);
+
+    if (!tenant) {
+      return fail("Tenant no encontrado");
+    }
+
+    return ok(
+      {
+        currency: tenant.currency,
+        timezone: tenant.timezone,
+        decimalPrecision: tenant.decimalPrecision ?? null,
+        thousandsSeparator: tenant.thousandsSeparator ?? null,
+        decimalSeparator: tenant.decimalSeparator ?? null,
+        branding: {
+          brandColor: tenant.brandColor ?? null,
+          logoUrl: tenant.logoUrl ?? null,
+          documentLogoUrl: tenant.documentLogoUrl ?? null,
+          footerText: tenant.footerText ?? null,
+        },
+        assistantStatus: assistantConfig?.status ?? "ACTIVE",
+      },
+      "Configuración del tenant obtenida",
+    );
+  } catch (error) {
+    return fail(
+      error instanceof Error ? error.message : "Unable to get settings",
+    );
+  }
+}
+
 export const PLATFORM_TOOLS: Record<
   string,
   (tenantId: string, args: Record<string, unknown>) => Promise<PlatformToolResult>
@@ -237,6 +348,9 @@ export const PLATFORM_TOOLS: Record<
   getProducts: (tenantId, args) => getProductsTool(tenantId, args),
   getCustomers: (tenantId, args) => getCustomersTool(tenantId, args),
   getChannels: (tenantId) => getChannelsTool(tenantId),
+  getReports: (tenantId) => getReportsTool(tenantId),
+  getIntegrations: (tenantId) => getIntegrationsTool(tenantId),
+  getSettings: (tenantId) => getSettingsTool(tenantId),
 };
 
 export const PLATFORM_TOOL_DEFINITIONS = [
@@ -326,6 +440,36 @@ export const PLATFORM_TOOL_DEFINITIONS = [
     name: "getChannels",
     description:
       "Lista los canales configurados del tenant. No requiere argumentos.",
+    parameters: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "getReports",
+    description:
+      "Obtiene un reporte del tenant: conteo de cotizaciones por estado, ventas por estado con totales, y los 5 productos más vendidos. No requiere argumentos.",
+    parameters: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "getIntegrations",
+    description:
+      "Obtiene las integraciones/configuración de canales del tenant (WhatsApp, Web Chat, Instagram): estado y si están configurados. No requiere argumentos.",
+    parameters: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "getSettings",
+    description:
+      "Obtiene la configuración general del tenant: moneda, zona horaria, formato de números, branding (color, logos, footer) y estado del asistente. No requiere argumentos.",
     parameters: {
       type: "object",
       properties: {},

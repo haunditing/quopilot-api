@@ -10,6 +10,7 @@ import {
   updatePlan,
 } from "../services/plan-service.js";
 import { createPlanSchema, updatePlanSchema } from "../schemas/plan-schema.js";
+import { getPlanCapabilityMatrix } from "../services/capability-service.js";
 
 export async function listPlansController(
   req: AuthenticatedRequest,
@@ -188,6 +189,57 @@ export async function updatePlanFeaturesController(
     console.error(error);
     res.status(500).json({
       message: error instanceof Error ? error.message : "Unable to update plan features",
+    });
+  }
+}
+
+export async function getPlanCapabilitiesController(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  const key = req.params.key;
+  if (!key || typeof key !== "string") {
+    res.status(400).json({ message: "Plan key required" });
+    return;
+  }
+
+  try {
+    const matrix = await getPlanCapabilityMatrix(key);
+    res.status(200).json(matrix);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: error instanceof Error ? error.message : "Unable to load plan capabilities",
+    });
+  }
+}
+
+export async function updatePlanCapabilitiesController(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  const key = req.params.key;
+  if (!key || typeof key !== "string") {
+    res.status(400).json({ message: "Plan key required" });
+    return;
+  }
+
+  const { enabledCapabilities } = req.body;
+
+  if (!Array.isArray(enabledCapabilities)) {
+    res.status(400).json({ message: "enabledCapabilities array required" });
+    return;
+  }
+
+  try {
+    const plan = await (await import("../services/plan-service.js")).updatePlan(key, {
+      enabledCapabilities,
+    });
+    res.status(200).json(plan);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: error instanceof Error ? error.message : "Unable to update plan capabilities",
     });
   }
 }

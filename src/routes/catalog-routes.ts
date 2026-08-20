@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { AppFeature } from "../models/AppFeature.js";
+import { AppCapability } from "../models/AppCapability.js";
 import { AIAssistantTool } from "../models/AIAssistantTool.js";
 import { syncCatalogManually } from "../services/feature-sync-service.js";
 import { authenticate } from "../middleware/auth-middleware.js";
@@ -30,6 +31,18 @@ router.get("/ai-tools", async (_req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Unable to load AI tools" });
+  }
+});
+
+router.get("/capabilities", async (_req, res) => {
+  try {
+    const capabilities = await AppCapability.find({ isActive: true })
+      .sort({ module: 1, sortOrder: 1 })
+      .lean();
+    res.status(200).json(capabilities);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Unable to load capabilities" });
   }
 });
 

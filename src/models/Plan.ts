@@ -7,6 +7,7 @@ export interface IPlan extends Document {
   isActive: boolean;
   isDefault: boolean;
   enabledFeatures: string[]; // Array of feature keys from AppFeature
+  enabledCapabilities: string[]; // Optional fine-grained gate: capability codes (AppCapability). Empty = all capabilities of enabled features.
   sortOrder: number;
   createdAt: Date;
   updatedAt: Date;
@@ -46,6 +47,11 @@ const planSchema = new Schema(
     },
 
     enabledFeatures: {
+      type: [String],
+      default: [],
+    },
+
+    enabledCapabilities: {
       type: [String],
       default: [],
     },

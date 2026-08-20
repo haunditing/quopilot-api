@@ -1,5 +1,6 @@
 import { Plan } from "../models/Plan.js";
 import { AppFeature } from "../models/AppFeature.js";
+import { AppCapability } from "../models/AppCapability.js";
 
 export async function listPlans() {
   return Plan.find().sort({ sortOrder: 1, createdAt: 1 }).lean();
@@ -20,6 +21,11 @@ export async function getDefaultPlan() {
 export async function getPlanEnabledFeatures(key: string): Promise<string[]> {
   const plan = await getPlanByKey(key);
   return plan?.enabledFeatures ?? [];
+}
+
+export async function getPlanEnabledCapabilities(key: string): Promise<string[]> {
+  const plan = await getPlanByKey(key);
+  return plan?.enabledCapabilities ?? [];
 }
 
 export async function isFeatureEnabled(planKey: string, featureKey: string): Promise<boolean> {
@@ -43,6 +49,7 @@ export async function createPlan(input: {
   isActive?: boolean;
   isDefault?: boolean;
   enabledFeatures?: string[];
+  enabledCapabilities?: string[];
   sortOrder?: number;
 }) {
   const key = input.key.toUpperCase();
@@ -54,6 +61,11 @@ export async function createPlan(input: {
   // Validate features exist in AppFeature
   const validFeatures = input.enabledFeatures ? await validateFeatures(input.enabledFeatures) : [];
 
+  // Validate capabilities exist in AppCapability
+  const validCapabilities = input.enabledCapabilities
+    ? await validateCapabilities(input.enabledCapabilities)
+    : [];
+
   const plan = await Plan.create({
     key,
     name: input.name,
@@ -61,6 +73,7 @@ export async function createPlan(input: {
     isActive: input.isActive ?? true,
     isDefault: input.isDefault ?? false,
     enabledFeatures: validFeatures,
+    enabledCapabilities: validCapabilities,
     sortOrder: input.sortOrder ?? 0,
   });
 
@@ -73,6 +86,7 @@ export async function updatePlan(key: string, input: {
   isActive?: boolean;
   isDefault?: boolean;
   enabledFeatures?: string[];
+  enabledCapabilities?: string[];
   sortOrder?: number;
 }) {
   if (input.isDefault) {
@@ -84,6 +98,12 @@ export async function updatePlan(key: string, input: {
   if (input.enabledFeatures) {
     validFeatures = await validateFeatures(input.enabledFeatures);
     input = { ...input, enabledFeatures: validFeatures };
+  }
+
+  // Validate capabilities if provided
+  if (input.enabledCapabilities) {
+    const validCapabilities = await validateCapabilities(input.enabledCapabilities);
+    input = { ...input, enabledCapabilities: validCapabilities };
   }
 
   const plan = await Plan.findOneAndUpdate(
@@ -128,4 +148,10 @@ async function validateFeatures(featureKeys: string[]): Promise<string[]> {
   const features = await AppFeature.find({ key: { $in: featureKeys } }).lean();
   const validKeys = new Set(features.map((f) => f.key));
   return featureKeys.filter((k) => validKeys.has(k));
+}
+
+async function validateCapabilities(capabilityCodes: string[]): Promise<string[]> {
+  const capabilities = await AppCapability.find({ code: { $in: capabilityCodes } }).lean();
+  const validCodes = new Set(capabilities.map((c) => c.code));
+  return capabilityCodes.filter((k) => validCodes.has(k));
 }
