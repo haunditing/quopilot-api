@@ -1,5 +1,5 @@
 import { Plan } from "../models/Plan.js";
-import type { PlanAppFeature } from "../models/Plan.js";
+import { AppFeature } from "../models/AppFeature.js";
 
 export async function listPlans() {
   return Plan.find().sort({ sortOrder: 1, createdAt: 1 }).lean();
@@ -17,23 +17,23 @@ export async function getDefaultPlan() {
   return Plan.findOne({ isDefault: true, isActive: true }).lean();
 }
 
-export async function getPlanFeatures(key: string) {
+export async function getPlanEnabledFeatures(key: string): Promise<string[]> {
   const plan = await getPlanByKey(key);
-  return plan?.features ?? [];
+  return plan?.enabledFeatures ?? [];
 }
 
 export async function isFeatureEnabled(planKey: string, featureKey: string): Promise<boolean> {
   const plan = await getPlanByKey(planKey);
   if (!plan) return false;
-  const feature = plan.features.find((f) => f.key === featureKey);
-  return feature?.enabled ?? false;
+  return plan.enabledFeatures.includes(featureKey);
 }
 
 export async function getFeatureConfig(planKey: string, featureKey: string): Promise<Record<string, unknown> | null> {
   const plan = await getPlanByKey(planKey);
   if (!plan) return null;
-  const feature = plan.features.find((f) => f.key === featureKey);
-  return feature?.config ?? null;
+  if (!plan.enabledFeatures.includes(featureKey)) return null;
+  const feature = await AppFeature.findOne({ key: featureKey }).lean();
+  return feature?.metadata ?? null;
 }
 
 export async function createPlan(input: {
@@ -42,7 +42,7 @@ export async function createPlan(input: {
   description?: string;
   isActive?: boolean;
   isDefault?: boolean;
-  features?: Array<{ key: string; label: string; description?: string; enabled?: boolean; config?: Record<string, unknown> }>;
+  enabledFeatures?: string[];
   sortOrder?: number;
 }) {
   const key = input.key.toUpperCase();
@@ -51,13 +51,16 @@ export async function createPlan(input: {
     await Plan.updateMany({ isDefault: true }, { $set: { isDefault: false } });
   }
 
+  // Validate features exist in AppFeature
+  const validFeatures = input.enabledFeatures ? await validateFeatures(input.enabledFeatures) : [];
+
   const plan = await Plan.create({
     key,
     name: input.name,
     description: input.description ?? "",
     isActive: input.isActive ?? true,
     isDefault: input.isDefault ?? false,
-    features: input.features ?? [],
+    enabledFeatures: validFeatures,
     sortOrder: input.sortOrder ?? 0,
   });
 
@@ -69,11 +72,18 @@ export async function updatePlan(key: string, input: {
   description?: string;
   isActive?: boolean;
   isDefault?: boolean;
-  features?: Array<{ key: string; label: string; description?: string; enabled?: boolean; config?: Record<string, unknown> }>;
+  enabledFeatures?: string[];
   sortOrder?: number;
 }) {
   if (input.isDefault) {
     await Plan.updateMany({ isDefault: true }, { $set: { isDefault: false } });
+  }
+
+  // Validate features if provided
+  let validFeatures: string[] | undefined;
+  if (input.enabledFeatures) {
+    validFeatures = await validateFeatures(input.enabledFeatures);
+    input = { ...input, enabledFeatures: validFeatures };
   }
 
   const plan = await Plan.findOneAndUpdate(
@@ -112,4 +122,10 @@ export async function setDefaultPlan(key: string) {
   }
 
   return plan;
+}
+
+async function validateFeatures(featureKeys: string[]): Promise<string[]> {
+  const features = await AppFeature.find({ key: { $in: featureKeys } }).lean();
+  const validKeys = new Set(features.map((f) => f.key));
+  return featureKeys.filter((k) => validKeys.has(k));
 }

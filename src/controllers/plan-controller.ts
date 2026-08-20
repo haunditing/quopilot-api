@@ -4,6 +4,7 @@ import {
   createPlan,
   deletePlan,
   getPlanByKey,
+  getPlanEnabledFeatures,
   listPlans,
   setDefaultPlan,
   updatePlan,
@@ -138,6 +139,55 @@ export async function setDefaultPlanController(
     console.error(error);
     res.status(500).json({
       message: error instanceof Error ? error.message : "Unable to set default plan",
+    });
+  }
+}
+
+export async function getPlanFeaturesController(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  const key = req.params.key;
+  if (!key || typeof key !== "string") {
+    res.status(400).json({ message: "Plan key required" });
+    return;
+  }
+
+  try {
+    const features = await getPlanEnabledFeatures(key);
+    res.status(200).json(features);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Unable to load plan features" });
+  }
+}
+
+export async function updatePlanFeaturesController(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  const key = req.params.key;
+  if (!key || typeof key !== "string") {
+    res.status(400).json({ message: "Plan key required" });
+    return;
+  }
+
+  const { enabledFeatures } = req.body;
+
+  if (!Array.isArray(enabledFeatures)) {
+    res.status(400).json({ message: "enabledFeatures array required" });
+    return;
+  }
+
+  try {
+    const plan = await (await import("../services/plan-service.js")).updatePlan(key, {
+      enabledFeatures,
+    });
+    res.status(200).json(plan);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: error instanceof Error ? error.message : "Unable to update plan features",
     });
   }
 }

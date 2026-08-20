@@ -3,10 +3,14 @@ import app from "./app.js";
 import env from "./config/env.js";
 import { connectToDatabase } from "./database/mongodb.js";
 import { startConversationSweeper } from "./services/conversation-sweeper-service.js";
+import { syncCatalogOnStartup } from "./services/feature-sync-service.js";
 
 async function startServer(): Promise<void> {
   try {
     await connectToDatabase();
+
+    // Sync catalogs on startup
+    await syncCatalogOnStartup();
 
     startConversationSweeper();
 

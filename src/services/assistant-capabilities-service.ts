@@ -1,45 +1,64 @@
 import { AssistantPlanCapabilities } from "../models/AssistantPlanCapabilities.js";
-import type { FunctionalityCapabilities } from "../models/AssistantPlanCapabilities.js";
-
-const ALL_CAPABILITIES: AssistantCapability[] = ["consult", "explain", "create", "modify", "delete", "execute"];
-
-type AssistantCapability = "consult" | "explain" | "create" | "modify" | "delete" | "execute";
+import type { ToolPermission, AIToolAction, AIExecutionLevel } from "../models/AIAssistantTool.js";
+import { AIAssistantTool } from "../models/AIAssistantTool.js";
 
 export async function getAssistantCapabilities(planKey: string) {
   const caps = await AssistantPlanCapabilities.findOne({ planKey: planKey.toUpperCase() }).lean();
-  return caps ?? { planKey: planKey.toUpperCase(), functionalities: [] };
+  return caps ?? { planKey: planKey.toUpperCase(), toolPermissions: [], globalDefaults: { defaultExecutionLevel: "READ_ONLY", requireConfirmationFor: ["create", "modify", "delete", "execute"] } };
 }
 
-export async function getCapability(planKey: string, functionalityKey: string, capability: AssistantCapability): Promise<boolean> {
+export async function getToolPermissionsForPlan(planKey: string) {
   const caps = await getAssistantCapabilities(planKey);
-  const func = caps.functionalities.find((f) => f.functionalityKey === functionalityKey);
-  return func?.capabilities[capability] ?? false;
+  return caps.toolPermissions ?? [];
 }
 
-export async function getAllCapabilitiesForPlan(planKey: string): Promise<Record<string, Record<string, boolean>>> {
-  const caps = await getAssistantCapabilities(planKey);
-  const result: Record<string, Record<string, boolean>> = {};
-  for (const func of caps.functionalities) {
-    result[func.functionalityKey] = func.capabilities;
-  }
-  return result;
+export async function getToolPermissionsForPrompt(planKey: string): Promise<Record<string, any>> {
+  const perms = await getToolPermissionsForPlan(planKey);
+  return perms.reduce((acc, p) => {
+    acc[p.toolKey] = {
+      actions: p.allowedActions,
+      level: p.executionLevel,
+      confirm: p.requiresConfirmation,
+      conditions: p.conditions,
+    };
+    return acc;
+  }, {} as Record<string, any>);
+}
+
+export async function getExecutionLevel(planKey: string, toolKey: string): Promise<"READ_ONLY" | "ASSISTED_DRAFT" | "FULL_AUTOMATION"> {
+  const perms = await getToolPermissionsForPlan(planKey);
+  const perm = perms.find((p) => p.toolKey === toolKey);
+  return perm?.executionLevel ?? "READ_ONLY";
 }
 
 export async function isCapabilityAllowed(
   planKey: string,
-  functionalityKey: string,
-  capability: "consult" | "explain" | "create" | "modify" | "delete" | "execute"
+  toolKey: string,
+  action: AIToolAction
 ): Promise<boolean> {
+  const perms = await getToolPermissionsForPlan(planKey);
+  const perm = perms.find((p) => p.toolKey === toolKey);
+  if (!perm) return false;
+  return perm.allowedActions.includes(action);
+}
+
+export async function requiresConfirmation(planKey: string, toolKey: string, action: AIToolAction): Promise<boolean> {
   const caps = await getAssistantCapabilities(planKey);
-  const func = caps.functionalities.find((f) => f.functionalityKey === functionalityKey);
-  return func?.capabilities[capability] ?? false;
+  const perm = caps.toolPermissions?.find((p) => p.toolKey === toolKey);
+  if (!perm) return true;
+  if (perm.requiresConfirmation) return true;
+  if (perm.executionLevel === "READ_ONLY") return true;
+  return (caps.globalDefaults?.requireConfirmationFor as string[] | undefined)?.includes(action) ?? false;
 }
 
 export async function setCapabilitiesForPlan(
   planKey: string,
-  functionalities: Array<{
-    functionalityKey: string;
-    capabilities: Record<"consult" | "explain" | "create" | "modify" | "delete" | "execute", boolean>;
+  toolPermissions: Array<{
+    toolKey: string;
+    allowedActions: AIToolAction[];
+    executionLevel: AIExecutionLevel;
+    requiresConfirmation: boolean;
+    conditions?: Record<string, unknown>;
   }>
 ) {
   const key = planKey.toUpperCase();
@@ -47,7 +66,7 @@ export async function setCapabilitiesForPlan(
   return AssistantPlanCapabilities.findOneAndUpdate(
     { planKey: key },
     {
-      $set: { functionalities },
+      $set: { toolPermissions },
     },
     {
       returnDocument: "after",
@@ -57,32 +76,40 @@ export async function setCapabilitiesForPlan(
   ).lean();
 }
 
-export async function updateFunctionalityCapabilities(
+export async function updateToolPermission(
   planKey: string,
-  functionalityKey: string,
-  capabilities: Partial<Record<"consult" | "explain" | "create" | "modify" | "delete" | "execute", boolean>>
+  toolKey: string,
+  updates: Partial<{
+    allowedActions: AIToolAction[];
+    executionLevel: "READ_ONLY" | "ASSISTED_DRAFT" | "FULL_AUTOMATION";
+    requiresConfirmation: boolean;
+    conditions: Record<string, unknown>;
+  }>
 ) {
   const caps = await AssistantPlanCapabilities.findOne({ planKey: planKey.toUpperCase() }).lean();
 
   if (!caps) {
     return AssistantPlanCapabilities.create({
       planKey: planKey.toUpperCase(),
-      functionalities: [{ functionalityKey, capabilities: { consult: false, explain: false, create: false, modify: false, delete: false, execute: false, ...capabilities } }],
+      toolPermissions: [{ toolKey, ...updates }] as any,
     }).then((doc) => doc.toObject());
   }
 
-  const existing = caps.functionalities.find((f) => f.functionalityKey === functionalityKey);
+  const existing = caps.toolPermissions.find((p) => p.toolKey === toolKey);
 
   if (existing) {
     return AssistantPlanCapabilities.findOneAndUpdate(
       { planKey: planKey.toUpperCase() },
       {
         $set: {
-          "functionalities.$[func].capabilities": { ...existing.capabilities, ...capabilities },
+          "toolPermissions.$[tool].allowedActions": updates.allowedActions ?? existing.allowedActions,
+          "toolPermissions.$[tool].executionLevel": updates.executionLevel ?? existing.executionLevel,
+          "toolPermissions.$[tool].requiresConfirmation": updates.requiresConfirmation ?? existing.requiresConfirmation,
+          "toolPermissions.$[tool].conditions": updates.conditions ?? existing.conditions,
         },
       },
       {
-        arrayFilters: [{ "func.functionalityKey": functionalityKey }],
+        arrayFilters: [{ "tool.toolKey": toolKey }],
         returnDocument: "after",
       },
     ).lean();
@@ -92,10 +119,7 @@ export async function updateFunctionalityCapabilities(
     { planKey: planKey.toUpperCase() },
     {
       $push: {
-        functionalities: {
-          functionalityKey,
-          capabilities: { consult: false, explain: false, create: false, modify: false, delete: false, execute: false, ...capabilities },
-        },
+        toolPermissions: { toolKey, ...updates },
       },
     },
     { returnDocument: "after" },
@@ -103,9 +127,22 @@ export async function updateFunctionalityCapabilities(
 }
 
 export async function deletePlanCapabilities(planKey: string) {
-  const result = await AssistantPlanCapabilities.findOneAndDelete({ planKey: planKey.toUpperCase() }).lean();
+  const result = await (await import("../models/AssistantPlanCapabilities.js")).AssistantPlanCapabilities.findOneAndDelete({ planKey: planKey.toUpperCase() }).lean();
   if (!result) {
     throw new Error("Plan capabilities not found");
   }
   return { id: planKey };
+}
+
+export async function getAllToolPermissions(planKey: string) {
+  const caps = await getAssistantCapabilities(planKey);
+  return caps.toolPermissions ?? [];
+}
+
+export async function getExecutionLevelsForPlan(planKey: string): Promise<Record<string, string>> {
+  const perms = await getToolPermissionsForPlan(planKey);
+  return perms.reduce((acc, p) => {
+    acc[p.toolKey] = p.executionLevel;
+    return acc;
+  }, {} as Record<string, string>);
 }

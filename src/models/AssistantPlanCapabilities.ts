@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from "mongoose";
+import { AIExecutionLevel, AIToolAction } from "./AIAssistantTool.js";
 
 export type AssistantCapability =
   | "consult"
@@ -8,51 +9,55 @@ export type AssistantCapability =
   | "delete"
   | "execute";
 
-export interface FunctionalityCapabilities {
-  functionalityKey: string;
-  capabilities: Record<AssistantCapability, boolean>;
+export interface ToolPermission {
+  toolKey: string;
+  allowedActions: AIToolAction[];
+  executionLevel: AIExecutionLevel;
+  requiresConfirmation: boolean;
+  conditions?: Record<string, unknown>;
 }
 
 export interface IAssistantPlanCapabilities extends Document {
   planKey: string;
-  functionalities: FunctionalityCapabilities[];
+  toolPermissions: ToolPermission[];
+  globalDefaults: {
+    defaultExecutionLevel: AIExecutionLevel;
+    requireConfirmationFor: AIToolAction[];
+  };
   createdAt: Date;
   updatedAt: Date;
 }
 
-const functionalityCapabilitiesSchema = new Schema<FunctionalityCapabilities>(
+const toolPermissionSchema = new Schema(
   {
-    functionalityKey: {
+    toolKey: {
       type: String,
       required: true,
       trim: true,
     },
-    capabilities: {
-      type: new Schema(
-        {
-          consult: { type: Boolean, default: false },
-          explain: { type: Boolean, default: false },
-          create: { type: Boolean, default: false },
-          modify: { type: Boolean, default: false },
-          delete: { type: Boolean, default: false },
-          execute: { type: Boolean, default: false },
-        },
-        { _id: false },
-      ),
-      default: {
-        consult: false,
-        explain: false,
-        create: false,
-        modify: false,
-        delete: false,
-        execute: false,
-      },
+    allowedActions: {
+      type: [String],
+      enum: ["consult", "explain", "create", "modify", "delete", "execute"],
+      default: [],
+    },
+    executionLevel: {
+      type: String,
+      enum: ["READ_ONLY", "ASSISTED_DRAFT", "FULL_AUTOMATION"],
+      default: "READ_ONLY",
+    },
+    requiresConfirmation: {
+      type: Boolean,
+      default: true,
+    },
+    conditions: {
+      type: Schema.Types.Mixed,
+      default: {},
     },
   },
   { _id: false },
 );
 
-const assistantPlanCapabilitiesSchema = new Schema<IAssistantPlanCapabilities>(
+const assistantPlanCapabilitiesSchema = new Schema(
   {
     planKey: {
       type: String,
@@ -63,9 +68,22 @@ const assistantPlanCapabilitiesSchema = new Schema<IAssistantPlanCapabilities>(
       index: true,
     },
 
-    functionalities: {
-      type: [functionalityCapabilitiesSchema],
+    toolPermissions: {
+      type: [toolPermissionSchema],
       default: [],
+    },
+
+    globalDefaults: {
+      defaultExecutionLevel: {
+        type: String,
+        enum: ["READ_ONLY", "ASSISTED_DRAFT", "FULL_AUTOMATION"],
+        default: "READ_ONLY",
+      },
+      requireConfirmationFor: {
+        type: [String],
+        enum: ["consult", "explain", "create", "modify", "delete", "execute"],
+        default: ["create", "modify", "delete", "execute"],
+      },
     },
   },
   {
@@ -73,7 +91,7 @@ const assistantPlanCapabilitiesSchema = new Schema<IAssistantPlanCapabilities>(
   },
 );
 
-export const AssistantPlanCapabilities = mongoose.model<IAssistantPlanCapabilities>(
+export const AssistantPlanCapabilities = mongoose.model(
   "AssistantPlanCapabilities",
   assistantPlanCapabilitiesSchema,
 );

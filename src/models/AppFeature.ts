@@ -1,18 +1,18 @@
 import mongoose, { Document, Schema } from "mongoose";
 
-export interface IPlan extends Document {
+export interface IAppFeature extends Document {
   key: string;
-  name: string;
+  label: string;
   description: string;
+  category: string;
   isActive: boolean;
-  isDefault: boolean;
-  enabledFeatures: string[]; // Array of feature keys from AppFeature
   sortOrder: number;
+  metadata?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const planSchema = new Schema(
+const appFeatureSchema = new Schema<IAppFeature>(
   {
     key: {
       type: String,
@@ -23,7 +23,7 @@ const planSchema = new Schema(
       index: true,
     },
 
-    name: {
+    label: {
       type: String,
       required: true,
       trim: true,
@@ -35,24 +35,26 @@ const planSchema = new Schema(
       trim: true,
     },
 
+    category: {
+      type: String,
+      required: true,
+      trim: true,
+      index: true,
+    },
+
     isActive: {
       type: Boolean,
       default: true,
     },
 
-    isDefault: {
-      type: Boolean,
-      default: false,
-    },
-
-    enabledFeatures: {
-      type: [String],
-      default: [],
-    },
-
     sortOrder: {
       type: Number,
       default: 0,
+    },
+
+    metadata: {
+      type: Schema.Types.Mixed,
+      default: {},
     },
   },
   {
@@ -60,4 +62,7 @@ const planSchema = new Schema(
   },
 );
 
-export const Plan = mongoose.model("Plan", planSchema);
+appFeatureSchema.index({ category: 1, sortOrder: 1 });
+appFeatureSchema.index({ isActive: 1, sortOrder: 1 });
+
+export const AppFeature = mongoose.model<IAppFeature>("AppFeature", appFeatureSchema);

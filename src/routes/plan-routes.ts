@@ -3,9 +3,11 @@ import {
   createPlanController,
   deletePlanController,
   getPlanController,
+  getPlanFeaturesController,
   listPlansController,
   setDefaultPlanController,
   updatePlanController,
+  updatePlanFeaturesController,
 } from "../controllers/plan-controller.js";
 import { authenticate } from "../middleware/auth-middleware.js";
 import { authorize } from "../middleware/authorize.js";
@@ -20,5 +22,7 @@ router.get("/:key", getPlanController);
 router.put("/:key", updatePlanController);
 router.delete("/:key", deletePlanController);
 router.post("/:key/default", setDefaultPlanController);
+router.get("/:key/features", getPlanFeaturesController);
+router.put("/:key/features", updatePlanFeaturesController);
 
 export default router;

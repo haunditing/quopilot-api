@@ -27,7 +27,11 @@ import {
   PLATFORM_TOOL_DEFINITIONS,
 } from "./support-platform-tools.js";
 import { guardResponse } from "./support-response-guard.js";
-import { getAssistantCapabilities } from "./assistant-capabilities-service.js";
+import {
+  getAssistantCapabilities,
+  getAllToolPermissions,
+  getToolPermissionsForPrompt,
+} from "./assistant-capabilities-service.js";
 
 function parseToolArguments(raw: string): Record<string, unknown> {
   try {
@@ -38,56 +42,20 @@ function parseToolArguments(raw: string): Record<string, unknown> {
   }
 }
 
-type AssistantCapability = "consult" | "explain" | "create" | "modify" | "delete" | "execute";
-
-function filterToolsByCapabilities(
-  tools: Array<{ name: string; enabled: boolean; requiredCapability?: string; requiredPlanFeature?: string }>,
-  tenantPlan: string,
-  planFeatures: Array<{ key: string; enabled: boolean }>,
-  assistantCapabilities: Record<string, Record<string, boolean>>
-): Array<{ name: string; enabled: boolean }> {
-  return tools
-    .filter((tool) => {
-      if (!tool.enabled) return false;
-
-      // Check plan feature requirement
-      if (tool.requiredPlanFeature) {
-        const planFeature = planFeatures.find((f) => f.key === tool.requiredPlanFeature);
-        if (!planFeature || !planFeature.enabled) return false;
-      }
-
-      // Check assistant capability requirement
-      if (tool.requiredCapability) {
-        const funcCaps = assistantCapabilities[tool.requiredPlanFeature ?? tool.name];
-        if (!funcCaps || !funcCaps[tool.requiredCapability]) return false;
-      }
-
-      return true;
-    })
-    .map(({ name, enabled }) => ({ name, enabled }));
-}
-
-const TOOL_CAPABILITY_MAP: Record<string, { requiredPlanFeature: string; requiredCapability: "consult" | "explain" | "create" | "modify" | "delete" | "execute" }> = {
-  getTenantSummary: { requiredPlanFeature: "dashboard", requiredCapability: "consult" },
-  getAgentConfig: { requiredPlanFeature: "agent", requiredCapability: "consult" },
-  getSystemStatus: { requiredPlanFeature: "system", requiredCapability: "consult" },
-  getQuotes: { requiredPlanFeature: "quotes", requiredCapability: "consult" },
-  getSales: { requiredPlanFeature: "sales", requiredCapability: "consult" },
-  getProducts: { requiredPlanFeature: "products", requiredCapability: "consult" },
-  getCustomers: { requiredPlanFeature: "customers", requiredCapability: "consult" },
-  getChannels: { requiredPlanFeature: "channels", requiredCapability: "consult" },
+const TOOL_TO_ASSISTANT_KEY: Record<string, string> = {
+  getTenantSummary: "tools_dashboard",
+  getAgentConfig: "tools_agent",
+  getSystemStatus: "tools_dashboard",
+  getQuotes: "tools_quotes",
+  getSales: "tools_sales",
+  getProducts: "tools_products",
+  getCustomers: "tools_customers",
+  getChannels: "tools_channels",
 };
 
 async function getTenantPlan(tenantId: string): Promise<string> {
   const tenant = await Tenant.findById(tenantId).select("plan").lean();
   return tenant?.plan ?? "FREE";
-}
-
-async function getTenantPlanFeatures(tenantId: string) {
-  const tenant = await Tenant.findById(tenantId).select("plan").lean();
-  const planKey = tenant?.plan ?? "FREE";
-  const plan = await (await import("../models/Plan.js")).Plan.findOne({ key: planKey }).lean();
-  return plan?.features ?? [];
 }
 
 async function getOrCreateSupportConversation(tenantId: string, userId: string) {
@@ -122,6 +90,13 @@ function buildSystemPrompt(base: string, context: {
   docsBlock?: string;
   toolBlock?: string;
   inScope: boolean;
+  assistantCapabilities: Array<{
+    toolKey: string;
+    allowedActions: string[];
+    executionLevel: string;
+    requiresConfirmation: boolean;
+  }>;
+  executionLevels: Record<string, string>;
 }): string {
   const parts: string[] = [];
   parts.push(base.trim());
@@ -154,6 +129,15 @@ function buildSystemPrompt(base: string, context: {
     );
   }
 
+  if (context.assistantCapabilities.length > 0) {
+    const toolDescriptions = context.assistantCapabilities.map((p) => {
+      return `- ${p.toolKey}: ${p.allowedActions.join(", ")} | Nivel: ${p.executionLevel} | Confirm: ${p.requiresConfirmation ? "Sí" : "No"}`;
+    }).join("\n");
+    parts.push(
+      `\n## HERRAMIENTAS DISPONIBLES (Dinámico por Plan)\n${toolDescriptions}\n\n## REGLAS DE EJECUCIÓN:\n1. READ_ONLY: Solo consultar/explicar. NO ejecutes.\n2. ASSISTED_DRAFT: Prepara borrador, pide confirmación.\n3. FULL_AUTOMATION: Ejecuta automáticamente.\n4. Si requiresConfirmation=true, SIEMPRE pide confirmación.`,
+    );
+  }
+
   return parts.join("\n");
 }
 
@@ -164,17 +148,12 @@ export async function processSupportMessage(input: {
 }) {
   const { tenantId, userId, content } = input;
 
-  const [config, tenantPlan, planFeatures] = await Promise.all([
+  const [config, tenantPlan] = await Promise.all([
     getSupportAssistantConfig(),
     getTenantPlan(tenantId),
-    getTenantPlanFeatures(tenantId),
   ]);
 
   const assistantCapabilitiesDoc = await getAssistantCapabilities(tenantPlan);
-  const assistantCapabilities: Record<string, Record<string, boolean>> = {};
-  for (const func of assistantCapabilitiesDoc.functionalities) {
-    assistantCapabilities[func.functionalityKey] = func.capabilities;
-  }
 
   const conversation = await getOrCreateSupportConversation(tenantId, userId);
   const conversationId = conversation._id.toString();
@@ -210,18 +189,29 @@ export async function processSupportMessage(input: {
   const scope = classifyScope(content);
   const route = routeIntent(content);
 
-  const allowedTools = filterToolsByCapabilities(
-    Object.entries(PLATFORM_TOOLS).map(([name, fn]) => ({
-      name,
-      enabled: true,
-      ...TOOL_CAPABILITY_MAP[name],
-    })),
-    tenantPlan,
-    await getTenantPlanFeatures(tenantId),
-    assistantCapabilities
-  );
+  const assistantCapabilities = await getAssistantCapabilities(tenantPlan);
+  const toolPermissions = assistantCapabilities.toolPermissions ?? [];
 
-  const allowedToolNames = new Set(allowedTools.filter(t => t.enabled).map(t => t.name));
+  const allowedTools = Object.entries(PLATFORM_TOOLS)
+    .map(([name, fn]) => {
+      const toolKey = TOOL_TO_ASSISTANT_KEY[name];
+      if (!toolKey) return null;
+
+      const perm = toolPermissions.find((p) => p.toolKey === toolKey);
+      if (!perm || perm.allowedActions.length === 0) return null;
+
+      return {
+        name,
+        enabled: true,
+        toolKey,
+        executionLevel: perm.executionLevel,
+        allowedActions: perm.allowedActions,
+        requiresConfirmation: perm.requiresConfirmation,
+      };
+    })
+    .filter((t): t is NonNullable<typeof t> => t !== null);
+
+  const allowedToolNames = new Set(allowedTools.map((t) => t.name));
 
   const toolResults: Array<{ name: string; data: unknown }> = [];
 
@@ -317,12 +307,22 @@ export async function processSupportMessage(input: {
     timeoutMs: config.llm?.timeoutMs,
   });
 
+  const assistantCapabilitiesForPrompt = await getToolPermissionsForPrompt(tenantPlan);
+  const executionLevels = await getAllToolPermissions(tenantPlan).then((perms) =>
+    perms.reduce((acc, p) => {
+      acc[p.toolKey] = p.executionLevel;
+      return acc;
+    }, {} as Record<string, string>),
+  );
+
   const systemPrompt = buildSystemPrompt(config.systemPrompt ?? "", {
     module: route.module,
     caseBlock,
     docsBlock,
     toolBlock,
     inScope: scope.inScope,
+    assistantCapabilities: assistantCapabilities.toolPermissions ?? [],
+    executionLevels,
   });
 
   const recent = await SupportMessage.find({
