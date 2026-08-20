@@ -33,6 +33,7 @@ import {
   getToolPermissionsForPrompt,
 } from "./assistant-capabilities-service.js";
 import { getPlanEnabledFeatures } from "./plan-service.js";
+import { getEffectiveCapabilityCodes } from "./capability-service.js";
 import type { AIToolAction } from "../models/AIAssistantTool.js";
 
 function parseToolArguments(raw: string): Record<string, unknown> {
@@ -72,6 +73,26 @@ const ASSISTANT_TOOL_FEATURE_MAP: Record<string, string> = {
   tools_reports: "reports",
   tools_integrations: "integrations",
   tools_settings: "settings",
+  tools_knowledge: "",
+  tools_cases: "",
+};
+
+// Map herramienta IA -> capacidad atómica de QuoPilot (Nivel 1 fino).
+// Cada tool del asistente lee datos de la capacidad de consulta de su módulo.
+// tools_knowledge y tools_cases son específicos del asistente y no dependen
+// de una capacidad general de la aplicación.
+const ASSISTANT_TOOL_CAPABILITY_MAP: Record<string, string> = {
+  tools_dashboard: "dashboard.view",
+  tools_customers: "customers.view",
+  tools_products: "products.view",
+  tools_quotes: "quotes.view",
+  tools_sales: "sales.view",
+  tools_channels: "channels.view",
+  tools_conversations: "conversations.view",
+  tools_agent: "agent.configure",
+  tools_reports: "reports.view",
+  tools_integrations: "integrations.manage",
+  tools_settings: "settings.company",
   tools_knowledge: "",
   tools_cases: "",
 };
@@ -224,9 +245,16 @@ export async function processSupportMessage(input: {
   // Nivel 1: funcionalidades generales habilitadas para el plan del tenant
   const enabledFeatures = new Set(await getPlanEnabledFeatures(tenantPlan));
 
-  // Autorización efectiva = feature habilitada (Nivel 1) AND capacidad del
-  // asistente permitida para esa acción (Nivel 2). La restricción se aplica
-  // en backend: el LLM solo ve y solo puede invocar herramientas autorizadas.
+  // Nivel 1 (fino): capacidades atómicas efectivas del plan (feature del
+  // módulo habilitada + capacidad habilitada). Si el plan no define
+  // enabledCapabilities, todas las capacidades de los módulos habilitados
+  // quedan efectivas (comportamiento actual se mantiene).
+  const effectiveCapabilities = new Set(await getEffectiveCapabilityCodes(tenantPlan));
+
+  // Autorización efectiva = feature habilitada (Nivel 1) AND capacidad efectiva
+  // (Nivel 1 fino) AND capacidad del asistente permitida para esa acción
+  // (Nivel 2). La restricción se aplica en backend: el LLM solo ve y solo
+  // puede invocar herramientas autorizadas.
   const allowedTools = Object.entries(PLATFORM_TOOLS)
     .map(([name]) => {
       const toolKey = TOOL_TO_ASSISTANT_KEY[name];
@@ -234,6 +262,9 @@ export async function processSupportMessage(input: {
 
       const featureKey = ASSISTANT_TOOL_FEATURE_MAP[toolKey];
       if (featureKey && !enabledFeatures.has(featureKey)) return null;
+
+      const capabilityKey = ASSISTANT_TOOL_CAPABILITY_MAP[toolKey];
+      if (capabilityKey && !effectiveCapabilities.has(capabilityKey)) return null;
 
       const requiredAction = TOOL_REQUIRED_ACTION[name] ?? "consult";
       const perm = toolPermissions.find((p) => p.toolKey === toolKey);
