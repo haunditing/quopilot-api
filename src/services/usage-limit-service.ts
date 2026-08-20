@@ -10,25 +10,16 @@ import { Types } from "mongoose";
 import { Response, NextFunction } from "express";
 import { AuthenticatedRequest } from "../middleware/auth-middleware.js";
 
-export type UsageLimitKey =
-  | "maxCustomers"
-  | "maxProducts"
-  | "maxQuotesPerMonth"
-  | "maxSalesPerMonth"
-  | "maxActiveAgents"
-  | "maxChannels"
-  | "maxAiQueriesPerMonth";
-
 export interface UsageCheckResult {
   allowed: boolean;
   current: number;
   limit: number;
-  limitKey: UsageLimitKey;
+  limitCode: string;
 }
 
 export async function checkUsageLimit(
   tenantId: string,
-  limitKey: UsageLimitKey,
+  limitCode: string,
   increment = 1,
 ): Promise<UsageCheckResult> {
   if (!Types.ObjectId.isValid(tenantId)) {
@@ -38,19 +29,22 @@ export async function checkUsageLimit(
 
   const tenant = await Tenant.findById(tenantId).select("plan").lean();
   if (!tenant || !tenant.plan) {
-    return { allowed: true, current: 0, limit: -1, limitKey };
+    return { allowed: true, current: 0, limit: -1, limitCode };
   }
 
   const plan = await Plan.findOne({ key: tenant.plan.toUpperCase() }).lean();
-  if (!plan || !plan.usageLimits) {
-    return { allowed: true, current: 0, limit: -1, limitKey };
+  let limit = -1; // Por defecto sin límite si el plan no lo define explícitamente
+
+  if (plan && Array.isArray(plan.usageLimits)) {
+    const found = plan.usageLimits.find((ul) => ul.code === limitCode);
+    if (found) {
+      limit = found.limit;
+    }
   }
 
-  const limits = plan.usageLimits as Record<string, number | undefined>;
-  const limit = limits[limitKey];
-
-  if (limit === undefined || limit === null || limit < 0) {
-    return { allowed: true, current: 0, limit: -1, limitKey };
+  // -1 significa ilimitado / no limitado explícitamente por el plan
+  if (limit < 0) {
+    return { allowed: true, current: 0, limit: -1, limitCode };
   }
 
   const startOfMonth = new Date();
@@ -58,38 +52,40 @@ export async function checkUsageLimit(
   startOfMonth.setHours(0, 0, 0, 0);
 
   let current = 0;
-  switch (limitKey) {
-    case "maxCustomers":
+  switch (limitCode) {
+    case "customers.max":
       current = await Customer.countDocuments({ tenantId: tenantObjectId, isLead: { $ne: true } });
       break;
-    case "maxProducts":
+    case "products.max":
       current = await Product.countDocuments({ tenantId: tenantObjectId });
       break;
-    case "maxQuotesPerMonth":
+    case "quotes.maxMonthly":
       current = await Quote.countDocuments({ tenantId: tenantObjectId, createdAt: { $gte: startOfMonth } });
       break;
-    case "maxSalesPerMonth":
+    case "sales.maxMonthly":
       current = await Sale.countDocuments({ tenantId: tenantObjectId, createdAt: { $gte: startOfMonth } });
       break;
-    case "maxActiveAgents":
+    case "agents.maxActive":
       current = await User.countDocuments({ tenantId: tenantObjectId, role: "AGENT", status: "ACTIVE" });
       break;
-    case "maxChannels":
+    case "channels.max":
       current = await Channel.countDocuments({ tenantId: tenantObjectId, status: "ACTIVE" });
       break;
-    case "maxAiQueriesPerMonth":
+    case "ai.queriesMonthly":
       current = 0;
       break;
+    default:
+      current = 0;
   }
 
   const allowed = (current + increment) <= limit;
-  return { allowed, current, limit, limitKey };
+  return { allowed, current, limit, limitCode };
 }
 
 /**
  * Middleware para bloquear operaciones si se excede el límite de uso del plan.
  */
-export function requireUsageLimit(limitKey: UsageLimitKey) {
+export function requireUsageLimit(limitCode: string) {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const tenantId = req.user?.tenantId || (req as any).tenant?._id?.toString();
     if (!tenantId) {
@@ -97,19 +93,19 @@ export function requireUsageLimit(limitKey: UsageLimitKey) {
     }
 
     try {
-      const result = await checkUsageLimit(tenantId, limitKey, 1);
+      const result = await checkUsageLimit(tenantId, limitCode, 1);
       if (!result.allowed) {
         return res.status(429).json({
-          message: `Límite de uso excedido para ${limitKey} (${result.current}/${result.limit}). Actualiza tu plan para continuar.`,
+          message: `Límite de uso excedido para ${limitCode} (${result.current}/${result.limit}). Actualiza tu plan para continuar.`,
           code: "QUOTA_EXCEEDED",
-          limitKey,
+          limitCode,
           current: result.current,
           limit: result.limit,
         });
       }
       next();
     } catch (error) {
-      console.error(`[UsageLimit] Error checking limit ${limitKey}:`, error);
+      console.error(`[UsageLimit] Error checking limit ${limitCode}:`, error);
       res.status(500).json({ message: "Internal usage limit check error" });
     }
   };

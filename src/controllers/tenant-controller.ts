@@ -14,6 +14,9 @@ import {
 } from "../services/tenant-service.js";
 import { getUsers } from "../services/user-service.js";
 import { getPlanCapabilityMatrix } from "../services/capability-service.js";
+import { Plan } from "../models/Plan.js";
+import { AppUsageLimit } from "../models/AppUsageLimit.js";
+import { checkUsageLimit } from "../services/usage-limit-service.js";
 
 export async function getCurrentTenantCapabilitiesController(
   req: AuthenticatedRequest,
@@ -347,5 +350,91 @@ export async function updateTenantStatusController(
     res.status(200).json(tenant);
   } catch (error) {
     handleTenantError(res, error, "Unable to update tenant status");
+  }
+}
+
+async function buildTenantUsageResponse(tenantId: string, planKey = "FREE") {
+  const plan = await Plan.findOne({ key: planKey.toUpperCase() }).lean();
+  const catalogLimits = await AppUsageLimit.find({ isActive: true }).lean();
+  const planLimitsMap = new Map(
+    (plan?.usageLimits ?? []).map((ul: any) => [ul.code, ul.limit]),
+  );
+
+  const usageResults = await Promise.all(
+    catalogLimits.map(async (limitDef: any) => {
+      const configuredLimit = planLimitsMap.get(limitDef.code) ?? limitDef.defaultValue;
+      const check = await checkUsageLimit(tenantId, limitDef.code, 0);
+      return {
+        code: limitDef.code,
+        name: limitDef.name,
+        description: limitDef.description,
+        unit: limitDef.unit,
+        limit: configuredLimit,
+        current: check.current,
+        allowed: check.allowed,
+      };
+    }),
+  );
+
+  return {
+    planKey,
+    usage: usageResults,
+  };
+}
+
+export async function getCurrentTenantUsageController(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  try {
+    const tenant = (req as any).tenant;
+    if (!tenant || !tenant.plan) {
+      res.status(400).json({ message: "Tenant plan context missing" });
+      return;
+    }
+    const data = await buildTenantUsageResponse(tenant._id.toString(), tenant.plan);
+    res.status(200).json(data);
+  } catch (error) {
+    handleTenantError(res, error, "Unable to load tenant usage");
+  }
+}
+
+export async function getTenantUsageController(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  try {
+    const tenantId = req.params.tenantId;
+    if (typeof tenantId !== "string") {
+      res.status(400).json({ message: "Invalid tenantId" });
+      return;
+    }
+    const tenant = await getTenantById(tenantId);
+    if (!tenant) {
+      res.status(404).json({ message: "Tenant not found" });
+      return;
+    }
+    const data = await buildTenantUsageResponse(tenant._id.toString(), tenant.plan);
+    res.status(200).json(data);
+  } catch (error) {
+    handleTenantError(res, error, "Unable to load tenant usage");
+  }
+}
+
+export async function updateTenantPlanController(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  try {
+    const tenantId = req.params.tenantId;
+    const { plan } = req.body;
+    if (typeof tenantId !== "string" || !plan || typeof plan !== "string") {
+      res.status(400).json({ message: "Invalid tenantId or plan key" });
+      return;
+    }
+    const updated = await updateTenant(tenantId, { plan: plan.toUpperCase() } as any);
+    res.status(200).json(updated);
+  } catch (error) {
+    handleTenantError(res, error, "Unable to update tenant plan");
   }
 }

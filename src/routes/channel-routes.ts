@@ -29,7 +29,7 @@ router.post(
   authorize("TENANT_ADMIN"),
   requireTenant,
   requireCapability("channels.create"),
-  requireUsageLimit("maxChannels"),
+  requireUsageLimit("channels.max"),
   createChannelController,
 );
 

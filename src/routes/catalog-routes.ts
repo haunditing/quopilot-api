@@ -46,6 +46,18 @@ router.get("/capabilities", async (_req, res) => {
   }
 });
 
+router.get("/usage-limits", async (_req, res) => {
+  try {
+    const limits = await (await import("../models/AppUsageLimit.js")).AppUsageLimit.find({ isActive: true })
+      .sort({ sortOrder: 1 })
+      .lean();
+    res.status(200).json(limits);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Unable to load usage limits catalog" });
+  }
+});
+
 router.post("/sync-catalog", async (_req, res) => {
   try {
     const result = await (await import("../services/feature-sync-service.js")).syncCatalogManually();

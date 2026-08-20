@@ -18,7 +18,7 @@ router.use(authenticate, authorize("TENANT_ADMIN"), requireTenant);
 
 router.get("/", getUsersController);
 
-router.post("/", requireUsageLimit("maxActiveAgents"), createAgentController);
+router.post("/", requireUsageLimit("agents.maxActive"), createAgentController);
 
 router.get("/:userId", getUserController);
 

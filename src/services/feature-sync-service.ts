@@ -1,6 +1,7 @@
 import { AppFeature } from "../models/AppFeature.js";
 import { AIAssistantTool } from "../models/AIAssistantTool.js";
 import { AppCapability } from "../models/AppCapability.js";
+import { AppUsageLimit } from "../models/AppUsageLimit.js";
 import { AssistantPlanCapabilities } from "../models/AssistantPlanCapabilities.js";
 import { Plan } from "../models/Plan.js";
 import {
@@ -8,6 +9,7 @@ import {
   DEFAULT_APP_FEATURES_BY_PLAN,
 } from "../registry/app-feature-registry.js";
 import { APP_CAPABILITIES_REGISTRY } from "../registry/app-capability-registry.js";
+import { APP_USAGE_LIMITS_REGISTRY } from "../registry/app-usage-limit-registry.js";
 import {
   AI_TOOLS_REGISTRY,
   DEFAULT_ASSISTANT_CAPABILITIES_BY_PLAN,
@@ -41,21 +43,13 @@ async function upsertRegistry<T>(
   return { created, updated };
 }
 
-/**
- * Migra planes existentes que tengan enabledCapabilities vacío a una lista explícita
- * basada en sus features habilitadas, preservando el comportamiento "todas por defecto"
- * antes de activar la nueva semántica fail-closed.
- */
 async function migrateExistingPlansToExplicitCapabilities(): Promise<void> {
   const plans = await Plan.find();
   const catalog = APP_CAPABILITIES_REGISTRY.filter((c) => c.configurableByPlan);
 
   for (const plan of plans) {
-    // Idempotencia: solo migrar si está vacío
     if (!plan.enabledCapabilities || plan.enabledCapabilities.length === 0) {
       const enabledFeatures = new Set(plan.enabledFeatures || []);
-
-      // Bajo la regla antigua, todas las capacidades de módulos habilitados eran efectivas
       const codesToMaterialize = catalog
         .filter((c) => enabledFeatures.has(c.module))
         .map((c) => c.code);
@@ -65,10 +59,19 @@ async function migrateExistingPlansToExplicitCapabilities(): Promise<void> {
           { _id: plan._id },
           { $set: { enabledCapabilities: codesToMaterialize } },
         );
-        console.log(
-          `[Migration] Plan ${plan.key} migrado: ${codesToMaterialize.length} capacidades materializadas.`,
-        );
       }
+    }
+
+    // Inicializar usageLimits si están vacíos con los valores por defecto del catálogo
+    if (!plan.usageLimits || plan.usageLimits.length === 0) {
+      const defaultUsageLimits = APP_USAGE_LIMITS_REGISTRY.map((ul) => ({
+        code: ul.code,
+        limit: ul.defaultValue,
+      }));
+      await Plan.updateOne(
+        { _id: plan._id },
+        { $set: { usageLimits: defaultUsageLimits } },
+      );
     }
   }
 }
@@ -95,7 +98,6 @@ async function syncDefaultCapabilitiesForPlans(): Promise<void> {
             requireConfirmationFor: ["create", "modify", "delete", "execute"],
           },
         });
-        console.log(`Assistant capabilities for ${plan.key} created.`);
       }
     }
   }
@@ -117,38 +119,21 @@ export async function syncCatalogOnStartup(): Promise<void> {
   console.log("[FeatureSync] Starting catalog synchronization...");
 
   try {
-    // 1. Upsert App Features
     const features = await upsertRegistry(AppFeature, APP_FEATURES_REGISTRY, "key");
-    console.log(
-      `[FeatureSync] App Features: ${features.created} created, ${features.updated} updated`,
-    );
-
-    // 2. Upsert AI Tools
     const tools = await upsertRegistry(AIAssistantTool, AI_TOOLS_REGISTRY, "key");
-    console.log(`[FeatureSync] AI Tools: ${tools.created} created, ${tools.updated} updated`);
-
-    // 3. Upsert App Capabilities (inventario maestro atomizado)
     const capabilities = await upsertRegistry(AppCapability, APP_CAPABILITIES_REGISTRY, "code");
+    const usageLimits = await upsertRegistry(AppUsageLimit, APP_USAGE_LIMITS_REGISTRY, "code");
+
     console.log(
-      `[FeatureSync] App Capabilities: ${capabilities.created} created, ${capabilities.updated} updated`,
+      `[FeatureSync] Catalogs: Features(${features.created}), Tools(${tools.created}), Capabilities(${capabilities.created}), UsageLimits(${usageLimits.created})`,
     );
 
-    // 4. Migración de planes a capacidades explícitas (Nivel 1)
     await migrateExistingPlansToExplicitCapabilities();
-
-    // 5. Sync default capabilities for plans (Nivel 2)
     await syncDefaultCapabilitiesForPlans();
-    console.log("[FeatureSync] Assistant capabilities synced for all plans");
 
-    // 6. Validar integridad del catálogo
     const report = await validateCatalogIntegrity();
     if (!report.valid) {
-      console.warn(
-        `[FeatureSync] Catalog integrity issues found: ${report.errors.length} errors, ${report.warnings.length} warnings`,
-      );
-      report.errors.forEach((e) => console.error(`  - ERROR: ${e}`));
-    } else if (report.warnings.length > 0) {
-      console.log(`[FeatureSync] Catalog integrity: ${report.warnings.length} warnings.`);
+      console.warn(`[FeatureSync] Catalog integrity issues: ${report.errors.length} errors.`);
     }
 
     console.log("[FeatureSync] Catalog synchronization completed successfully");
@@ -165,10 +150,13 @@ export async function syncCatalogManually(): Promise<{
   toolsUpdated: number;
   capabilitiesCreated: number;
   capabilitiesUpdated: number;
+  usageLimitsCreated: number;
+  usageLimitsUpdated: number;
 }> {
   const features = await upsertRegistry(AppFeature, APP_FEATURES_REGISTRY, "key");
   const tools = await upsertRegistry(AIAssistantTool, AI_TOOLS_REGISTRY, "key");
   const capabilities = await upsertRegistry(AppCapability, APP_CAPABILITIES_REGISTRY, "code");
+  const usageLimits = await upsertRegistry(AppUsageLimit, APP_USAGE_LIMITS_REGISTRY, "code");
 
   await migrateExistingPlansToExplicitCapabilities();
   await syncDefaultCapabilitiesForPlans();
@@ -180,5 +168,7 @@ export async function syncCatalogManually(): Promise<{
     toolsUpdated: tools.updated,
     capabilitiesCreated: capabilities.created,
     capabilitiesUpdated: capabilities.updated,
+    usageLimitsCreated: usageLimits.created,
+    usageLimitsUpdated: usageLimits.updated,
   };
 }

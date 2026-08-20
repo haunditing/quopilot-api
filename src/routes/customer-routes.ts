@@ -24,7 +24,7 @@ router.post(
   authorize("TENANT_ADMIN", "AGENT"),
   requireTenant,
   requireCapability("customers.create"),
-  requireUsageLimit("maxCustomers"),
+  requireUsageLimit("customers.max"),
   createCustomerController,
 );
 

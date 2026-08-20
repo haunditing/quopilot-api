@@ -15,7 +15,7 @@ import { getQuoteByIdController } from "../controllers/quote-controller.js";
 
 const router = Router();
 
-router.post("/", authenticate, requireTenant, requireCapability("quotes.create"), requireUsageLimit("maxQuotesPerMonth"), createQuoteController);
+router.post("/", authenticate, requireTenant, requireCapability("quotes.create"), requireUsageLimit("quotes.maxMonthly"), createQuoteController);
 
 router.patch("/:quoteId", authenticate, requireTenant, requireCapability("quotes.update"), updateQuoteController);
 

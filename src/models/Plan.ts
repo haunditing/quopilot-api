@@ -1,13 +1,8 @@
 import mongoose, { Document, Schema } from "mongoose";
 
-export interface IUsageLimits {
-  maxCustomers?: number;
-  maxProducts?: number;
-  maxQuotesPerMonth?: number;
-  maxSalesPerMonth?: number;
-  maxActiveAgents?: number;
-  maxChannels?: number;
-  maxAiQueriesPerMonth?: number;
+export interface IPlanUsageLimitEntry {
+  code: string;
+  limit: number;
 }
 
 export interface IPlan extends Document {
@@ -18,7 +13,7 @@ export interface IPlan extends Document {
   isDefault: boolean;
   enabledFeatures: string[];
   enabledCapabilities: string[];
-  usageLimits: IUsageLimits;
+  usageLimits: IPlanUsageLimitEntry[];
   sortOrder: number;
   createdAt: Date;
   updatedAt: Date;
@@ -68,24 +63,13 @@ const planSchema = new Schema(
     },
 
     usageLimits: {
-      type: {
-        maxCustomers: { type: Number, default: -1 },
-        maxProducts: { type: Number, default: -1 },
-        maxQuotesPerMonth: { type: Number, default: -1 },
-        maxSalesPerMonth: { type: Number, default: -1 },
-        maxActiveAgents: { type: Number, default: -1 },
-        maxChannels: { type: Number, default: -1 },
-        maxAiQueriesPerMonth: { type: Number, default: -1 },
-      },
-      default: () => ({
-        maxCustomers: -1,
-        maxProducts: -1,
-        maxQuotesPerMonth: -1,
-        maxSalesPerMonth: -1,
-        maxActiveAgents: -1,
-        maxChannels: -1,
-        maxAiQueriesPerMonth: -1,
-      }),
+      type: [
+        {
+          code: { type: String, required: true, trim: true },
+          limit: { type: Number, required: true, default: -1 },
+        },
+      ],
+      default: [],
     },
 
     sortOrder: {

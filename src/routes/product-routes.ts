@@ -31,7 +31,7 @@ router.post(
   authorize("TENANT_ADMIN"),
   requireTenant,
   requireCapability("products.create"),
-  requireUsageLimit("maxProducts"),
+  requireUsageLimit("products.max"),
   createProductController,
 );
 
