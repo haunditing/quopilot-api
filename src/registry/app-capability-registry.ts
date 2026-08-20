@@ -25,9 +25,7 @@ export interface IAppCapabilityDTO {
 }
 
 const OBLIGATORIA: CapabilityDependencyType = "OBLIGATORIA";
-const FUNCIONAL: CapabilityDependencyType = "FUNCIONAL";
-const TECNICA: CapabilityDependencyType = "TECNICA";
-const CONFIGURACION: CapabilityDependencyType = "CONFIGURACION";
+const OPCIONAL: CapabilityDependencyType = "OPCIONAL";
 
 // Inventario maestro de capacidades de QuoPilot (Nivel 1).
 // Solo capacidades reales detectadas en la aplicación (rutas API, páginas web
@@ -49,7 +47,7 @@ export const APP_CAPABILITIES_REGISTRY: IAppCapabilityDTO[] = [
     sortOrder: 1,
   },
   {
-    module: "dashboard",
+    module: "reports",
     code: "reports.view",
     name: "Módulo de reportes",
     description: "No existe página de reportes; los KPIs del dashboard son lo más cercano.",
@@ -137,7 +135,7 @@ export const APP_CAPABILITIES_REGISTRY: IAppCapabilityDTO[] = [
     configurableByPlan: true,
     dependencies: [
       { code: "customers.view", type: OBLIGATORIA },
-      { code: "sales.view", type: FUNCIONAL },
+      { code: "sales.view", type: OPCIONAL },
     ],
     evidence: "Tool getCustomerHistory (agent-tools/customer-tools.ts)",
     status: "ACTIVE",
@@ -274,7 +272,7 @@ export const APP_CAPABILITIES_REGISTRY: IAppCapabilityDTO[] = [
     configurableByPlan: true,
     dependencies: [
       { code: "quotes.view", type: OBLIGATORIA },
-      { code: "quotes.create", type: FUNCIONAL },
+      { code: "quotes.create", type: OPCIONAL },
     ],
     evidence: "PATCH /api/quotes/:id",
     status: "ACTIVE",
@@ -368,7 +366,7 @@ export const APP_CAPABILITIES_REGISTRY: IAppCapabilityDTO[] = [
     description: "Eliminar una venta (solo si está cancelada).",
     kind: "ELIMINACION",
     configurableByPlan: true,
-    dependencies: [{ code: "sales.cancel", type: FUNCIONAL }],
+    dependencies: [{ code: "sales.cancel", type: OBLIGATORIA }],
     evidence: "DELETE /api/sales/:id",
     status: "ACTIVE",
     isActive: true,
@@ -476,7 +474,7 @@ export const APP_CAPABILITIES_REGISTRY: IAppCapabilityDTO[] = [
     configurableByPlan: true,
     dependencies: [
       { code: "channels.view", type: OBLIGATORIA },
-      { code: "agent.configure", type: TECNICA },
+      { code: "agent.configure", type: OBLIGATORIA },
     ],
     evidence: "/api/agent/public/chat/*; src/pages/PublicChat.tsx",
     status: "ACTIVE",
@@ -506,7 +504,7 @@ export const APP_CAPABILITIES_REGISTRY: IAppCapabilityDTO[] = [
     description: "Bandeja de entrada con filtros por canal, estado y asignación.",
     kind: "VISUALIZACION",
     configurableByPlan: true,
-    dependencies: [{ code: "channels.view", type: FUNCIONAL }],
+    dependencies: [{ code: "channels.view", type: OPCIONAL }],
     evidence: "GET /api/conversations; src/pages/Conversations.tsx",
     status: "ACTIVE",
     isActive: true,
@@ -601,8 +599,8 @@ export const APP_CAPABILITIES_REGISTRY: IAppCapabilityDTO[] = [
     kind: "COMUNICACION",
     configurableByPlan: true,
     dependencies: [
-      { code: "agent.configure", type: TECNICA },
-      { code: "channels.view", type: FUNCIONAL },
+      { code: "agent.configure", type: OBLIGATORIA },
+      { code: "channels.view", type: OPCIONAL },
     ],
     evidence: "POST /api/agent/conversations; src/pages/AgentChat.tsx",
     status: "ACTIVE",
@@ -720,7 +718,7 @@ export const APP_CAPABILITIES_REGISTRY: IAppCapabilityDTO[] = [
     description: "El agente modifica una cotización en borrador.",
     kind: "IA",
     configurableByPlan: true,
-    dependencies: [{ code: "agent.quoteDraft", type: FUNCIONAL }],
+    dependencies: [{ code: "agent.quoteDraft", type: OPCIONAL }],
     evidence: "Tool updateQuote (agent-tools/quote-tools.ts)",
     status: "ACTIVE",
     isActive: true,
@@ -847,7 +845,7 @@ export const APP_CAPABILITIES_REGISTRY: IAppCapabilityDTO[] = [
     sortOrder: 5,
   },
   {
-    module: "settings",
+    module: "integrations",
     code: "integrations.manage",
     name: "Módulo de integraciones",
     description: "Gestión de integraciones externas (API, webhooks). Hoy cubierto por canales.",

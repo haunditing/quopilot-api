@@ -1,6 +1,10 @@
 import { Plan } from "../models/Plan.js";
 import { AppFeature } from "../models/AppFeature.js";
 import { AppCapability } from "../models/AppCapability.js";
+import {
+  DEFAULT_APP_FEATURES_BY_PLAN,
+  DEFAULT_APP_CAPABILITIES_BY_PLAN,
+} from "../registry/app-feature-registry.js";
 
 export async function listPlans() {
   return Plan.find().sort({ sortOrder: 1, createdAt: 1 }).lean();
@@ -58,13 +62,17 @@ export async function createPlan(input: {
     await Plan.updateMany({ isDefault: true }, { $set: { isDefault: false } });
   }
 
+  // Baseline explícito si no se proveen listas
+  const featuresToValidate =
+    input.enabledFeatures ?? DEFAULT_APP_FEATURES_BY_PLAN[key] ?? [];
+  const capabilitiesToValidate =
+    input.enabledCapabilities ?? DEFAULT_APP_CAPABILITIES_BY_PLAN[key] ?? [];
+
   // Validate features exist in AppFeature
-  const validFeatures = input.enabledFeatures ? await validateFeatures(input.enabledFeatures) : [];
+  const validFeatures = await validateFeatures(featuresToValidate);
 
   // Validate capabilities exist in AppCapability
-  const validCapabilities = input.enabledCapabilities
-    ? await validateCapabilities(input.enabledCapabilities)
-    : [];
+  const validCapabilities = await validateCapabilities(capabilitiesToValidate);
 
   const plan = await Plan.create({
     key,
@@ -151,7 +159,40 @@ async function validateFeatures(featureKeys: string[]): Promise<string[]> {
 }
 
 async function validateCapabilities(capabilityCodes: string[]): Promise<string[]> {
-  const capabilities = await AppCapability.find({ code: { $in: capabilityCodes } }).lean();
-  const validCodes = new Set(capabilities.map((c) => c.code));
-  return capabilityCodes.filter((k) => validCodes.has(k));
+  const capabilities = await AppCapability.find({
+    code: { $in: capabilityCodes },
+    isActive: true,
+  }).lean();
+
+  const capabilityMap = new Map(capabilities.map((c) => [c.code, c]));
+
+  // 1. Filtrar solo las que existen y son configurables por plan
+  // (Las no-configurables no se guardan en el plan porque siempre son efectivas)
+  const validConfigurableCodes = capabilityCodes.filter((code) => {
+    const cap = capabilityMap.get(code);
+    return cap && cap.configurableByPlan;
+  });
+
+  const uniqueCodes = [...new Set(validConfigurableCodes)];
+  const codesSet = new Set(uniqueCodes);
+
+  // 2. Validar dependencias OBLIGATORIAS
+  for (const code of uniqueCodes) {
+    const cap = capabilityMap.get(code);
+    if (cap && cap.dependencies) {
+      for (const dep of cap.dependencies) {
+        if (dep.type === "OBLIGATORIA" && !codesSet.has(dep.code)) {
+          // Verificar si la dependencia es no-configurable (siempre efectiva)
+          const depCap = await AppCapability.findOne({ code: dep.code }).lean();
+          if (!depCap || depCap.configurableByPlan) {
+            throw new Error(
+              `Integridad de plan: la capacidad "${code}" requiere "${dep.code}" (OBLIGATORIA)`,
+            );
+          }
+        }
+      }
+    }
+  }
+
+  return uniqueCodes;
 }

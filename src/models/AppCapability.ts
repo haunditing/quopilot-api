@@ -1,10 +1,6 @@
 import mongoose, { Document, Schema } from "mongoose";
 
-export type CapabilityDependencyType =
-  | "OBLIGATORIA"
-  | "FUNCIONAL"
-  | "TECNICA"
-  | "CONFIGURACION";
+export type CapabilityDependencyType = "OBLIGATORIA" | "OPCIONAL";
 
 export type CapabilityStatus = "ACTIVE" | "POR_CONFIRMAR";
 
@@ -58,7 +54,7 @@ const capabilityDependencySchema = new Schema<ICapabilityDependency>(
     },
     type: {
       type: String,
-      enum: ["OBLIGATORIA", "FUNCIONAL", "TECNICA", "CONFIGURACION"],
+      enum: ["OBLIGATORIA", "OPCIONAL"],
       required: true,
     },
   },
