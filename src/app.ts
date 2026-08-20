@@ -81,5 +81,6 @@ app.use("/api/super-admin/plans", planRoutes);
 app.use("/api/super-admin/assistant-capabilities", assistantCapabilitiesRoutes);
 app.use("/api/super-admin/commercial-policy", commercialPolicyRoutes);
 app.use("/api/admin", catalogRoutes);
+app.use("/api/plans", planRoutes);
 
 export default app;
