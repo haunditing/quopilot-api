@@ -27,6 +27,7 @@ import superAdminSupportAssistantRoutes from "./routes/super-admin-support-assis
 import planRoutes from "./routes/plan-routes.js";
 import assistantCapabilitiesRoutes from "./routes/assistant-capabilities-routes.js";
 import catalogRoutes from "./routes/catalog-routes.js";
+import commercialPolicyRoutes from "./routes/commercial-policy-routes.js";
 
 type RawBodyRequest = Request & {
   rawBody?: Buffer;
@@ -78,6 +79,7 @@ app.use("/api/support/assistant", supportAssistantRoutes);
 app.use("/api/super-admin/support/assistant", superAdminSupportAssistantRoutes);
 app.use("/api/super-admin/plans", planRoutes);
 app.use("/api/super-admin/assistant-capabilities", assistantCapabilitiesRoutes);
+app.use("/api/super-admin/commercial-policy", commercialPolicyRoutes);
 app.use("/api/admin", catalogRoutes);
 
 export default app;

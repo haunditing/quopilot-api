@@ -17,6 +17,12 @@ import { getPlanCapabilityMatrix } from "../services/capability-service.js";
 import { Plan } from "../models/Plan.js";
 import { AppUsageLimit } from "../models/AppUsageLimit.js";
 import { checkUsageLimit } from "../services/usage-limit-service.js";
+import {
+  getSubscriptionByTenantId,
+  createSubscriptionForTenant,
+  changeTenantSubscriptionPlan,
+  updateSubscriptionStatus,
+} from "../services/subscription-service.js";
 
 export async function getCurrentTenantCapabilitiesController(
   req: AuthenticatedRequest,
@@ -433,8 +439,58 @@ export async function updateTenantPlanController(
       return;
     }
     const updated = await updateTenant(tenantId, { plan: plan.toUpperCase() } as any);
+    try {
+      await changeTenantSubscriptionPlan(tenantId, plan.toUpperCase());
+    } catch {
+      // ignore if subscription doesn't exist yet
+    }
     res.status(200).json(updated);
   } catch (error) {
     handleTenantError(res, error, "Unable to update tenant plan");
+  }
+}
+
+export async function getTenantSubscriptionController(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  try {
+    const tenantId = req.params.tenantId;
+    if (typeof tenantId !== "string") {
+      res.status(400).json({ message: "Invalid tenantId" });
+      return;
+    }
+    const sub = await getSubscriptionByTenantId(tenantId);
+    res.status(200).json(sub ?? { tenantId, status: "TRIAL", planKey: "FREE" });
+  } catch (error) {
+    handleTenantError(res, error, "Unable to load tenant subscription");
+  }
+}
+
+export async function updateTenantSubscriptionController(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  try {
+    const tenantId = req.params.tenantId;
+    const { status, planKey } = req.body;
+    if (typeof tenantId !== "string") {
+      res.status(400).json({ message: "Invalid tenantId" });
+      return;
+    }
+    let sub = await getSubscriptionByTenantId(tenantId);
+    if (!sub) {
+      sub = await createSubscriptionForTenant(tenantId, planKey);
+    }
+    if (planKey) {
+      await changeTenantSubscriptionPlan(tenantId, planKey);
+    }
+    if (status) {
+      await updateSubscriptionStatus(tenantId, status);
+    }
+    const updated = await getSubscriptionByTenantId(tenantId);
+    res.status(200).json(updated);
+  } catch (error) {
+    handleTenantError(res, error, "Unable to update tenant subscription");
   }
 }
