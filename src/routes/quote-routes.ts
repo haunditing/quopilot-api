@@ -9,30 +9,33 @@ import {
 } from "../controllers/quote-controller.js";
 import { authenticate } from "../middleware/auth-middleware.js";
 import { requireTenant } from "../middleware/tenant-middleware.js";
+import { requireCapability } from "../middleware/entitlement-middleware.js";
 import { getQuoteByIdController } from "../controllers/quote-controller.js";
 
 const router = Router();
 
-router.post("/", authenticate, requireTenant, createQuoteController);
+router.post("/", authenticate, requireTenant, requireCapability("quotes.create"), createQuoteController);
 
-router.patch("/:quoteId", authenticate, requireTenant, updateQuoteController);
+router.patch("/:quoteId", authenticate, requireTenant, requireCapability("quotes.update"), updateQuoteController);
 
-router.post("/:quoteId/send", authenticate, requireTenant, sendQuoteController);
+router.post("/:quoteId/send", authenticate, requireTenant, requireCapability("quotes.send"), sendQuoteController);
 
 router.post(
   "/:quoteId/accept",
   authenticate,
   requireTenant,
+  requireCapability("quotes.accept"),
   acceptQuoteController,
 );
 
-router.get("/", authenticate, requireTenant, getQuotesController);
+router.get("/", authenticate, requireTenant, requireCapability("quotes.view"), getQuotesController);
 router.get(
   "/next-number",
   authenticate,
   requireTenant,
+  requireCapability("quotes.view"),
   getNextQuoteNumberController,
 );
-router.get("/:quoteId", authenticate, requireTenant, getQuoteByIdController);
+router.get("/:quoteId", authenticate, requireTenant, requireCapability("quotes.detail"), getQuoteByIdController);
 
 export default router;

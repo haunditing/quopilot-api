@@ -17,6 +17,7 @@ import {
 import { authenticate } from "../middleware/auth-middleware.js";
 import { authorize } from "../middleware/authorize.js";
 import { requireTenant } from "../middleware/tenant-middleware.js";
+import { requireCapability } from "../middleware/entitlement-middleware.js";
 import "../services/agent-config-assistant.js";
 
 const router = Router();
@@ -25,6 +26,7 @@ router.get(
   "/config",
   authenticate,
   requireTenant,
+  requireCapability("agent.configure"),
   getAgentConfigController,
 );
 
@@ -33,6 +35,7 @@ router.patch(
   authenticate,
   authorize("TENANT_ADMIN"),
   requireTenant,
+  requireCapability("agent.configure"),
   updateAgentConfigController,
 );
 
@@ -41,6 +44,7 @@ router.get(
   authenticate,
   authorize("TENANT_ADMIN"),
   requireTenant,
+  requireCapability("agent.chat"),
   listConversationsController,
 );
 
@@ -49,6 +53,7 @@ router.post(
   authenticate,
   authorize("TENANT_ADMIN"),
   requireTenant,
+  requireCapability("agent.chat"),
   openConversationController,
 );
 
@@ -57,6 +62,7 @@ router.get(
   authenticate,
   authorize("TENANT_ADMIN"),
   requireTenant,
+  requireCapability("agent.chat"),
   listMessagesController,
 );
 
@@ -65,6 +71,7 @@ router.post(
   authenticate,
   authorize("TENANT_ADMIN"),
   requireTenant,
+  requireCapability("agent.chat"),
   sendMessageController,
 );
 

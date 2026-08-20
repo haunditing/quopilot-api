@@ -158,7 +158,7 @@ export async function processInboundMessage(
     };
   }
 
-  const tools = getEnabledToolDefinitions(agent);
+  const tools = await getEnabledToolDefinitions(agent, tenantId);
 
   let reply = "";
   let iterations = 0;

@@ -10,15 +10,17 @@ import {
 import { authenticate } from "../middleware/auth-middleware.js";
 import { authorize } from "../middleware/authorize.js";
 import { requireTenant } from "../middleware/tenant-middleware.js";
+import { requireCapability } from "../middleware/entitlement-middleware.js";
 
 const router = Router();
 
-router.get("/", authenticate, requireTenant, getProductsController);
+router.get("/", authenticate, requireTenant, requireCapability("products.view"), getProductsController);
 
 router.get(
   "/:productId",
   authenticate,
   requireTenant,
+  requireCapability("products.detail"),
   getProductController,
 );
 
@@ -27,6 +29,7 @@ router.post(
   authenticate,
   authorize("TENANT_ADMIN"),
   requireTenant,
+  requireCapability("products.create"),
   createProductController,
 );
 
@@ -35,6 +38,7 @@ router.patch(
   authenticate,
   authorize("TENANT_ADMIN"),
   requireTenant,
+  requireCapability("products.update"),
   updateProductController,
 );
 
@@ -43,6 +47,7 @@ router.patch(
   authenticate,
   authorize("TENANT_ADMIN"),
   requireTenant,
+  requireCapability("products.changeStatus"),
   updateProductStatusController,
 );
 
@@ -51,6 +56,7 @@ router.delete(
   authenticate,
   authorize("TENANT_ADMIN"),
   requireTenant,
+  requireCapability("products.delete"),
   deleteProductController,
 );
 

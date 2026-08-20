@@ -13,6 +13,30 @@ import {
   updateTenantStatus,
 } from "../services/tenant-service.js";
 import { getUsers } from "../services/user-service.js";
+import { getPlanCapabilityMatrix } from "../services/capability-service.js";
+
+export async function getCurrentTenantCapabilitiesController(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  try {
+    const tenant = (req as any).tenant;
+    if (!tenant || !tenant.plan) {
+      res.status(400).json({ message: "Tenant plan context missing" });
+      return;
+    }
+    const matrix = await getPlanCapabilityMatrix(tenant.plan);
+    res.status(200).json({
+      planKey: tenant.plan,
+      featureKeys: matrix.featureKeys,
+      capabilityCodes: matrix.capabilityCodes,
+      effectiveCodes: matrix.entries.filter((e) => e.effective).map((e) => e.code),
+      entries: matrix.entries,
+    });
+  } catch (error) {
+    handleTenantError(res, error, "Unable to load tenant capabilities");
+  }
+}
 
 function handleTenantError(
   res: Response,

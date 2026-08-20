@@ -1,6 +1,8 @@
 import { AgentEvent } from "../../models/AgentEvent.js";
+import { Tenant } from "../../models/Tenant.js";
 import type { AgentTool as AgentToolCapability } from "../../models/Agent.js";
 import type { AgentToolDefinition } from "../llm-service.js";
+import { getEffectiveCapabilityCodes } from "../capability-service.js";
 import { productTools } from "./tools/product-tools.js";
 import { customerTools } from "./tools/customer-tools.js";
 import { quoteTools } from "./tools/quote-tools.js";
@@ -29,6 +31,21 @@ export const TOOL_CAPABILITY: Record<string, AgentToolCapability> = {
   requestHumanHandoff: "HUMAN_HANDOFF",
 };
 
+export const TOOL_BUSINESS_CAPABILITY_MAP: Record<string, string> = {
+  searchProducts: "products.view",
+  getProductDetails: "products.detail",
+  searchCustomers: "customers.view",
+  getCustomerHistory: "customers.history",
+  updateCustomer: "customers.update",
+  getQuotes: "quotes.view",
+  getQuoteStatus: "quotes.detail",
+  createQuote: "quotes.create",
+  updateQuote: "quotes.create",
+  acceptQuote: "quotes.accept",
+  getSales: "sales.view",
+  requestHumanHandoff: "agent.chat",
+};
+
 export const ALL_TOOL_NAMES: string[] = Object.keys(TOOL_CAPABILITY);
 
 const tools: AgentTool[] = [
@@ -54,14 +71,33 @@ function isToolEnabled(
   return policy.enabledTools.includes(capability);
 }
 
-export function getEnabledToolDefinitions(
+export async function getEnabledToolDefinitions(
   policy: AgentToolPolicy,
-): AgentToolDefinition[] {
+  tenantId?: string,
+): Promise<AgentToolDefinition[]> {
+  let effectiveCodes = new Set<string>();
+  if (tenantId) {
+    const tenant = await Tenant.findById(tenantId).select("plan").lean();
+    const planKey = tenant?.plan ?? "FREE";
+    effectiveCodes = new Set(await getEffectiveCapabilityCodes(planKey));
+  }
+
   return tools
     .filter((tool) => {
       const capability = TOOL_CAPABILITY[tool.name];
+      if (!capability || !isToolEnabled(capability, policy)) {
+        return false;
+      }
 
-      return capability ? isToolEnabled(capability, policy) : false;
+      // Validar entitlement de negocio (fail-closed si se pasa tenantId)
+      if (tenantId) {
+        const businessCap = TOOL_BUSINESS_CAPABILITY_MAP[tool.name];
+        if (businessCap && !effectiveCodes.has(businessCap)) {
+          return false;
+        }
+      }
+
+      return true;
     })
     .map((tool) => ({
       name: tool.name,
@@ -99,6 +135,19 @@ export async function executeTool(
 
   if (capability && !isToolEnabled(capability, ctx.agent)) {
     return failResult(`Tool is not enabled: ${name}`);
+  }
+
+  // Validar capability de negocio efectiva del tenant
+  if (ctx.tenantId) {
+    const businessCap = TOOL_BUSINESS_CAPABILITY_MAP[name];
+    if (businessCap) {
+      const tenant = await Tenant.findById(ctx.tenantId).select("plan").lean();
+      const planKey = tenant?.plan ?? "FREE";
+      const effectiveCodes = new Set(await getEffectiveCapabilityCodes(planKey));
+      if (!effectiveCodes.has(businessCap)) {
+        return failResult(`Tool capability not allowed by tenant plan: ${businessCap}`);
+      }
+    }
   }
 
   try {

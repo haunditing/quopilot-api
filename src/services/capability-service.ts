@@ -185,6 +185,24 @@ export async function getEffectiveCapabilityCodes(planKey: string): Promise<stri
   return matrix.entries.filter((e) => e.effective).map((e) => e.code);
 }
 
+/**
+ * Entitlement Engine: Resuelve si un tenant tiene una capacidad efectiva.
+ */
+export async function hasTenantCapability(tenant: { plan: string }, capabilityCode: string): Promise<boolean> {
+  if (!tenant.plan) return false;
+  return isCapabilityEffective(tenant.plan, capabilityCode);
+}
+
+/**
+ * Entitlement Engine: Resuelve si un tenant tiene una feature habilitada.
+ */
+export async function hasTenantFeature(tenant: { plan: string }, featureKey: string): Promise<boolean> {
+  if (!tenant.plan) return false;
+  const plan = await Plan.findOne({ key: tenant.plan.toUpperCase() }).lean();
+  if (!plan) return false;
+  return plan.enabledFeatures.includes(featureKey);
+}
+
 export async function isCapabilityEffective(planKey: string, capabilityCode: string): Promise<boolean> {
   const matrix = await getPlanCapabilityMatrix(planKey);
   return matrix.entries.some((e) => e.code === capabilityCode && e.effective);

@@ -10,6 +10,7 @@ import {
 import { authenticate } from "../middleware/auth-middleware.js";
 import { authorize } from "../middleware/authorize.js";
 import { requireTenant } from "../middleware/tenant-middleware.js";
+import { requireCapability } from "../middleware/entitlement-middleware.js";
 
 const router = Router();
 
@@ -17,6 +18,7 @@ router.get(
   "/",
   authenticate,
   requireTenant,
+  requireCapability("channels.view"),
   listChannelsController,
 );
 
@@ -25,6 +27,7 @@ router.post(
   authenticate,
   authorize("TENANT_ADMIN"),
   requireTenant,
+  requireCapability("channels.create"),
   createChannelController,
 );
 
@@ -32,6 +35,7 @@ router.get(
   "/:channelId",
   authenticate,
   requireTenant,
+  requireCapability("channels.detail"),
   getChannelController,
 );
 
@@ -40,6 +44,7 @@ router.patch(
   authenticate,
   authorize("TENANT_ADMIN"),
   requireTenant,
+  requireCapability("channels.update"),
   updateChannelController,
 );
 
@@ -48,6 +53,7 @@ router.patch(
   authenticate,
   authorize("TENANT_ADMIN"),
   requireTenant,
+  requireCapability("channels.changeStatus"),
   updateChannelStatusController,
 );
 
@@ -56,6 +62,7 @@ router.delete(
   authenticate,
   authorize("TENANT_ADMIN"),
   requireTenant,
+  requireCapability("channels.delete"),
   deleteChannelController,
 );
 

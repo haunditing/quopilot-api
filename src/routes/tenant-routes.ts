@@ -4,6 +4,7 @@ import { authorize } from "../middleware/authorize.js";
 import { requireTenant } from "../middleware/tenant-middleware.js";
 import {
   createTenantController,
+  getCurrentTenantCapabilitiesController,
   getCurrentTenantController,
   getTenantController,
   getTenantsController,
@@ -16,6 +17,7 @@ import {
 const router = Router();
 
 router.get("/me", authenticate, requireTenant, getCurrentTenantController);
+router.get("/me/capabilities", authenticate, requireTenant, getCurrentTenantCapabilitiesController);
 
 router.patch(
   "/me",
