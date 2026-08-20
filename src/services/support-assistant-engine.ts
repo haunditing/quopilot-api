@@ -1,4 +1,5 @@
 import { Types } from "mongoose";
+import { Tenant } from "../models/Tenant.js";
 import env from "../config/env.js";
 import { SupportConversation } from "../models/SupportConversation.js";
 import { SupportMessage } from "../models/SupportMessage.js";
@@ -26,23 +27,67 @@ import {
   PLATFORM_TOOL_DEFINITIONS,
 } from "./support-platform-tools.js";
 import { guardResponse } from "./support-response-guard.js";
+import { getAssistantCapabilities } from "./assistant-capabilities-service.js";
 
 function parseToolArguments(raw: string): Record<string, unknown> {
   try {
     const parsed = JSON.parse(raw);
-
     return parsed && typeof parsed === "object" ? parsed : {};
   } catch {
     return {};
   }
 }
 
-function filterToolsByPlan(tools: Array<{ name: string; enabled: boolean; planRequired?: string[] }>, tenantPlan: string): Array<{ name: string; enabled: boolean; planRequired?: string[] }> {
-  return tools.filter((tool) => {
-    if (!tool.enabled) return false;
-    if (!tool.planRequired || tool.planRequired.length === 0) return true;
-    return tool.planRequired.includes(tenantPlan);
-  }).map(({ name, enabled }) => ({ name, enabled }));
+type AssistantCapability = "consult" | "explain" | "create" | "modify" | "delete" | "execute";
+
+function filterToolsByCapabilities(
+  tools: Array<{ name: string; enabled: boolean; requiredCapability?: string; requiredPlanFeature?: string }>,
+  tenantPlan: string,
+  planFeatures: Array<{ key: string; enabled: boolean }>,
+  assistantCapabilities: Record<string, Record<string, boolean>>
+): Array<{ name: string; enabled: boolean }> {
+  return tools
+    .filter((tool) => {
+      if (!tool.enabled) return false;
+
+      // Check plan feature requirement
+      if (tool.requiredPlanFeature) {
+        const planFeature = planFeatures.find((f) => f.key === tool.requiredPlanFeature);
+        if (!planFeature || !planFeature.enabled) return false;
+      }
+
+      // Check assistant capability requirement
+      if (tool.requiredCapability) {
+        const funcCaps = assistantCapabilities[tool.requiredPlanFeature ?? tool.name];
+        if (!funcCaps || !funcCaps[tool.requiredCapability]) return false;
+      }
+
+      return true;
+    })
+    .map(({ name, enabled }) => ({ name, enabled }));
+}
+
+const TOOL_CAPABILITY_MAP: Record<string, { requiredPlanFeature: string; requiredCapability: "consult" | "explain" | "create" | "modify" | "delete" | "execute" }> = {
+  getTenantSummary: { requiredPlanFeature: "dashboard", requiredCapability: "consult" },
+  getAgentConfig: { requiredPlanFeature: "agent", requiredCapability: "consult" },
+  getSystemStatus: { requiredPlanFeature: "system", requiredCapability: "consult" },
+  getQuotes: { requiredPlanFeature: "quotes", requiredCapability: "consult" },
+  getSales: { requiredPlanFeature: "sales", requiredCapability: "consult" },
+  getProducts: { requiredPlanFeature: "products", requiredCapability: "consult" },
+  getCustomers: { requiredPlanFeature: "customers", requiredCapability: "consult" },
+  getChannels: { requiredPlanFeature: "channels", requiredCapability: "consult" },
+};
+
+async function getTenantPlan(tenantId: string): Promise<string> {
+  const tenant = await Tenant.findById(tenantId).select("plan").lean();
+  return tenant?.plan ?? "FREE";
+}
+
+async function getTenantPlanFeatures(tenantId: string) {
+  const tenant = await Tenant.findById(tenantId).select("plan").lean();
+  const planKey = tenant?.plan ?? "FREE";
+  const plan = await (await import("../models/Plan.js")).Plan.findOne({ key: planKey }).lean();
+  return plan?.features ?? [];
 }
 
 async function getOrCreateSupportConversation(tenantId: string, userId: string) {
@@ -79,7 +124,6 @@ function buildSystemPrompt(base: string, context: {
   inScope: boolean;
 }): string {
   const parts: string[] = [];
-
   parts.push(base.trim());
 
   if (!context.inScope) {
@@ -120,10 +164,19 @@ export async function processSupportMessage(input: {
 }) {
   const { tenantId, userId, content } = input;
 
-  const config = await getSupportAssistantConfig(tenantId);
+  const [config, tenantPlan, planFeatures] = await Promise.all([
+    getSupportAssistantConfig(),
+    getTenantPlan(tenantId),
+    getTenantPlanFeatures(tenantId),
+  ]);
+
+  const assistantCapabilitiesDoc = await getAssistantCapabilities(tenantPlan);
+  const assistantCapabilities: Record<string, Record<string, boolean>> = {};
+  for (const func of assistantCapabilitiesDoc.functionalities) {
+    assistantCapabilities[func.functionalityKey] = func.capabilities;
+  }
 
   const conversation = await getOrCreateSupportConversation(tenantId, userId);
-
   const conversationId = conversation._id.toString();
 
   await SupportMessage.create({
@@ -155,8 +208,20 @@ export async function processSupportMessage(input: {
   }
 
   const scope = classifyScope(content);
-
   const route = routeIntent(content);
+
+  const allowedTools = filterToolsByCapabilities(
+    Object.entries(PLATFORM_TOOLS).map(([name, fn]) => ({
+      name,
+      enabled: true,
+      ...TOOL_CAPABILITY_MAP[name],
+    })),
+    tenantPlan,
+    await getTenantPlanFeatures(tenantId),
+    assistantCapabilities
+  );
+
+  const allowedToolNames = new Set(allowedTools.filter(t => t.enabled).map(t => t.name));
 
   const toolResults: Array<{ name: string; data: unknown }> = [];
 
@@ -166,42 +231,34 @@ export async function processSupportMessage(input: {
     if (["platform", "tenants", "dashboard", "quotes", "sales", "products", "customers", "channels"].includes(route.module)) {
       toolsToRun.push("getTenantSummary");
     }
-
     if (["agent", "configuracion", "settings"].includes(route.module) || /agente|config/.test(content)) {
       toolsToRun.push("getAgentConfig");
     }
-
     if (["platform", "api", "auth", "system", "status"].includes(route.module)) {
       toolsToRun.push("getSystemStatus");
     }
-
     if (["quotes", "cotizaciones"].includes(route.module)) {
       toolsToRun.push("getQuotes");
     }
-
     if (["sales", "ventas"].includes(route.module)) {
       toolsToRun.push("getSales");
     }
-
     if (["products", "productos", "catalogo"].includes(route.module)) {
       toolsToRun.push("getProducts");
     }
-
     if (["customers", "clientes"].includes(route.module)) {
       toolsToRun.push("getCustomers");
     }
-
     if (["channels", "canales"].includes(route.module)) {
       toolsToRun.push("getChannels");
     }
 
     for (const toolName of toolsToRun) {
+      if (!allowedToolNames.has(toolName)) continue;
       const tool = PLATFORM_TOOLS[toolName];
-
       if (tool) {
         try {
           const result = await tool(tenantId, {});
-
           if (result.ok) {
             toolResults.push({ name: toolName, data: result.data });
           }
@@ -247,10 +304,7 @@ export async function processSupportMessage(input: {
   const toolBlock =
     toolResults.length > 0
       ? toolResults
-          .map(
-            (result) =>
-              `Herramienta ${result.name}: ${JSON.stringify(result.data)}`,
-          )
+          .map((result) => `Herramienta ${result.name}: ${JSON.stringify(result.data)}`)
           .join("\n")
       : "";
 
@@ -263,16 +317,13 @@ export async function processSupportMessage(input: {
     timeoutMs: config.llm?.timeoutMs,
   });
 
-  const systemPrompt = buildSystemPrompt(
-    config.systemPrompt ?? "",
-    {
-      module: route.module,
-      caseBlock,
-      docsBlock,
-      toolBlock,
-      inScope: scope.inScope,
-    },
-  );
+  const systemPrompt = buildSystemPrompt(config.systemPrompt ?? "", {
+    module: route.module,
+    caseBlock,
+    docsBlock,
+    toolBlock,
+    inScope: scope.inScope,
+  });
 
   const recent = await SupportMessage.find({
     tenantId,
@@ -289,36 +340,27 @@ export async function processSupportMessage(input: {
     toolCalls?: Array<{ id: string; name: string; arguments: string }>;
     toolCallId?: string;
   }> = [
-    {
-      role: "system",
-      content: systemPrompt,
-    },
+    { role: "system", content: systemPrompt },
     ...recent.map((message) => ({
-      role: (message.role === "USER" ? "user" : "assistant") as
-        | "user"
-        | "assistant",
+      role: (message.role === "USER" ? "user" : "assistant") as "user" | "assistant",
       content: message.content,
     })),
   ];
 
-  const enabledToolNames = config.agentTools
-    .filter((t) => t.enabled)
-    .map((t) => t.name);
-
-  const tools = PLATFORM_TOOL_DEFINITIONS
-    .filter((tool) => enabledToolNames.includes(tool.name))
-    .map((tool) => ({
-      name: tool.name,
-      description: tool.description,
-      parameters: tool.parameters,
-    }));
+  const allowedToolsForLLM = PLATFORM_TOOL_DEFINITIONS.filter((tool) =>
+    allowedToolNames.has(tool.name),
+  ).map((tool) => ({
+    name: tool.name,
+    description: tool.description,
+    parameters: tool.parameters,
+  }));
 
   let reply = "";
   let iterations = 0;
 
   try {
     while (iterations < env.agentMaxToolIterations) {
-      const result = await llm.complete(messages, tools);
+      const result = await llm.complete(messages, allowedToolsForLLM);
 
       if (result.toolCalls.length === 0) {
         reply = result.content;
@@ -332,25 +374,30 @@ export async function processSupportMessage(input: {
       });
 
       for (const toolCall of result.toolCalls) {
-        const tool = PLATFORM_TOOLS[toolCall.name];
+        if (!allowedToolNames.has(toolCall.name)) {
+          messages.push({
+            role: "tool",
+            content: JSON.stringify({
+              ok: false,
+              message: `Herramienta no disponible para tu plan: ${toolCall.name}`,
+            }),
+            toolCallId: toolCall.id,
+          });
+          continue;
+        }
 
+        const tool = PLATFORM_TOOLS[toolCall.name];
         let toolResult: { ok: boolean; message: string; data?: unknown };
 
         if (!tool) {
-          toolResult = {
-            ok: false,
-            message: `Herramienta desconocida: ${toolCall.name}`,
-          };
+          toolResult = { ok: false, message: `Herramienta desconocida: ${toolCall.name}` };
         } else {
           try {
             toolResult = await tool(tenantId, parseToolArguments(toolCall.arguments));
           } catch (error) {
             toolResult = {
               ok: false,
-              message:
-                error instanceof Error
-                  ? error.message
-                  : "Error ejecutando la herramienta",
+              message: error instanceof Error ? error.message : "Error ejecutando la herramienta",
             };
           }
         }
@@ -366,7 +413,6 @@ export async function processSupportMessage(input: {
     }
   } catch (error) {
     console.error("[support-assistant] llm error:", error);
-
     reply =
       "No hay un proveedor de inteligencia artificial configurado para el asistente de soporte. Puedes configurarlo desde la pestaña Configuración de esta página.";
   }
@@ -420,7 +466,6 @@ export async function processSupportMessage(input: {
 
 export async function getSupportMessages(tenantId: string, userId: string) {
   const conversation = await getOrCreateSupportConversation(tenantId, userId);
-
   const messages = await SupportMessage.find({
     tenantId,
     userId,
@@ -429,26 +474,13 @@ export async function getSupportMessages(tenantId: string, userId: string) {
     .sort({ createdAt: 1 })
     .lean();
 
-  return {
-    conversationId: conversation._id.toString(),
-    messages,
-  };
+  return { conversationId: conversation._id.toString(), messages };
 }
 
 export async function resetSupportConversation(tenantId: string, userId: string) {
   const conversation = await getOrCreateSupportConversation(tenantId, userId);
-
-  await SupportMessage.deleteMany({
-    tenantId,
-    userId,
-    conversationId: conversation._id,
-  });
-
-  await SupportConversation.updateOne(
-    { _id: conversation._id },
-    { $set: { status: "CLOSED" } },
-  );
-
+  await SupportMessage.deleteMany({ tenantId, userId, conversationId: conversation._id });
+  await SupportConversation.updateOne({ _id: conversation._id }, { $set: { status: "CLOSED" } });
   return { reset: true };
 }
 

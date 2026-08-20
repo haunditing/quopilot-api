@@ -64,7 +64,7 @@ export async function getTenantSummaryTool(tenantId: string): Promise<PlatformTo
 
 export async function getAgentConfigTool(tenantId: string): Promise<PlatformToolResult> {
   try {
-    const config = await SupportAssistantConfig.findOne({ tenantId }).lean();
+    const config = await SupportAssistantConfig.findOne().lean();
 
     return ok(
       {
@@ -72,7 +72,6 @@ export async function getAgentConfigTool(tenantId: string): Promise<PlatformTool
         llmConfigured: Boolean(config?.llm?.provider && config?.llm?.apiKey),
         provider: config?.llm?.provider ?? null,
         model: config?.llm?.model ?? null,
-        agentTools: config?.agentTools ?? [],
       },
       "Configuración del agente obtenida",
     );

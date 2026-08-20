@@ -1,15 +1,8 @@
-import mongoose, { Document, Schema, Types } from "mongoose";
+import mongoose, { Document, Schema } from "mongoose";
 
 export type SupportAssistantStatus = "ACTIVE" | "INACTIVE";
 
-export interface AgentToolConfig {
-  name: string;
-  enabled: boolean;
-  planRequired?: string[];
-}
-
 export interface ISupportAssistantConfig extends Document {
-  tenantId: Types.ObjectId;
   status: SupportAssistantStatus;
   llm?: {
     provider?: string;
@@ -25,30 +18,12 @@ export interface ISupportAssistantConfig extends Document {
   ragMinScore: number;
   memoryWindow: number;
   maxContextTokens: number;
-  agentTools: AgentToolConfig[];
   createdAt: Date;
   updatedAt: Date;
 }
 
-const agentToolConfigSchema = new Schema<AgentToolConfig>(
-  {
-    name: { type: String, required: true },
-    enabled: { type: Boolean, default: true },
-    planRequired: { type: [String], default: [] },
-  },
-  { _id: false },
-);
-
 const supportAssistantConfigSchema = new Schema<ISupportAssistantConfig>(
   {
-    tenantId: {
-      type: Schema.Types.ObjectId,
-      ref: "Tenant",
-      required: true,
-      unique: true,
-      index: true,
-    },
-
     status: {
       type: String,
       enum: ["ACTIVE", "INACTIVE"],
@@ -108,11 +83,6 @@ const supportAssistantConfigSchema = new Schema<ISupportAssistantConfig>(
       default: 6000,
       min: 500,
       max: 20000,
-    },
-
-    agentTools: {
-      type: [agentToolConfigSchema],
-      default: [],
     },
   },
   {

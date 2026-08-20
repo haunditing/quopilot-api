@@ -1,11 +1,10 @@
 import { SupportAssistantConfig } from "../models/SupportAssistantConfig.js";
-import type { AgentToolConfig } from "../models/SupportAssistantConfig.js";
 
 export const SUPPORT_ASSISTANT_ID = "support";
 
 const DEFAULT_SYSTEM_PROMPT = `
-Eres el asistente de soporte técnico interno de QuoPilot para este tenant. Tu función es ayudar
-a los administradores (TENANT_ADMIN) a resolver problemas, aprender a usar y monitorear su plataforma.
+Eres el asistente de soporte técnico interno de QuoPilot. Tu función es ayudar
+a los administradores de tenants a resolver problemas, aprender a usar y monitorear su plataforma.
 
 Reglas obligatorias:
 1. Solo responde consultas relacionadas con QuoPilot. Si la consulta está fuera
@@ -21,26 +20,14 @@ Reglas obligatorias:
 6. Se conciso, claro y en español. Usa listas o pasos numerados cuando sea útil.
 `;
 
-const DEFAULT_AGENT_TOOLS: AgentToolConfig[] = [
-  { name: "getTenantSummary", enabled: true },
-  { name: "getAgentConfig", enabled: true },
-  { name: "getSystemStatus", enabled: true },
-  { name: "getQuotes", enabled: true, planRequired: ["PRO", "ENTERPRISE"] },
-  { name: "getSales", enabled: true, planRequired: ["PRO", "ENTERPRISE"] },
-  { name: "getProducts", enabled: true, planRequired: ["STARTER", "PRO", "ENTERPRISE"] },
-  { name: "getCustomers", enabled: true, planRequired: ["STARTER", "PRO", "ENTERPRISE"] },
-  { name: "getChannels", enabled: true, planRequired: ["PRO", "ENTERPRISE"] },
-];
-
-export async function getSupportAssistantConfig(tenantId: string) {
-  const config = await SupportAssistantConfig.findOne({ tenantId }).lean();
+export async function getSupportAssistantConfig() {
+  const config = await SupportAssistantConfig.findOne().lean();
 
   if (config) {
     return config;
   }
 
   return SupportAssistantConfig.create({
-    tenantId,
     status: "ACTIVE",
     systemPrompt: DEFAULT_SYSTEM_PROMPT,
     caseThreshold: 0.55,
@@ -48,11 +35,10 @@ export async function getSupportAssistantConfig(tenantId: string) {
     ragMinScore: 0.3,
     memoryWindow: 8,
     maxContextTokens: 6000,
-    agentTools: DEFAULT_AGENT_TOOLS,
   }).then((doc) => doc.toObject());
 }
 
-export async function updateSupportAssistantConfig(tenantId: string, input: {
+export async function updateSupportAssistantConfig(input: {
   status?: "ACTIVE" | "INACTIVE";
   llm?: {
     provider?: string;
@@ -68,9 +54,8 @@ export async function updateSupportAssistantConfig(tenantId: string, input: {
   ragMinScore?: number;
   memoryWindow?: number;
   maxContextTokens?: number;
-  agentTools?: AgentToolConfig[];
 }) {
-  const existing = await getSupportAssistantConfig(tenantId);
+  const existing = await getSupportAssistantConfig();
 
   const config = await SupportAssistantConfig.findByIdAndUpdate(
     existing._id,

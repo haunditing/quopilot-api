@@ -198,17 +198,8 @@ export async function getSupportConfigController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
-  const tenantId = req.query.tenantId as string | undefined;
-
-  if (!tenantId) {
-    res.status(400).json({
-      message: "tenantId query parameter is required",
-    });
-    return;
-  }
-
   try {
-    const config = await getSupportAssistantConfig(tenantId);
+    const config = await getSupportAssistantConfig();
 
     res.status(200).json({
       status: config.status,
@@ -226,7 +217,6 @@ export async function getSupportConfigController(
       ragMinScore: config.ragMinScore,
       memoryWindow: config.memoryWindow,
       maxContextTokens: config.maxContextTokens,
-      agentTools: config.agentTools ?? [],
     });
   } catch (error) {
     console.error(error);
@@ -241,15 +231,6 @@ export async function updateSupportConfigController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
-  const tenantId = (req.body.tenantId ?? req.query.tenantId) as string | undefined;
-
-  if (!tenantId) {
-    res.status(400).json({
-      message: "tenantId is required (in body or query)",
-    });
-    return;
-  }
-
   const result = updateSupportAssistantConfigSchema.safeParse(req.body);
 
   if (!result.success) {
@@ -262,7 +243,7 @@ export async function updateSupportConfigController(
   }
 
   try {
-    await updateSupportAssistantConfig(tenantId, result.data);
+    await updateSupportAssistantConfig(result.data);
 
     res.status(200).json({
       ok: true,

@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "seed": "tsx scripts/seed-admin.ts",
+    "seed:plans": "tsx scripts/seed-plans.ts",
     "seed:demo": "tsx scripts/seed-demo-tenant.ts",
     "seed:data": "tsx scripts/seed-demo-data.ts"
   },

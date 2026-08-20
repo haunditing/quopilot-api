@@ -25,6 +25,7 @@ export interface ITenant extends Document {
   brandColor?: string;
   footerText?: string;
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+  plan?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -155,6 +156,12 @@ const tenantSchema = new Schema<ITenant>(
       type: String,
       enum: ["ACTIVE", "INACTIVE", "SUSPENDED"],
       default: "ACTIVE",
+    },
+
+    plan: {
+      type: String,
+      trim: true,
+      default: "FREE",
     },
   },
   {
