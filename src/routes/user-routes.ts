@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authorize } from "../middleware/authorize.js";
 import { authenticate } from "../middleware/auth-middleware.js";
 import { requireTenant } from "../middleware/tenant-middleware.js";
+import { requireUsageLimit } from "../services/usage-limit-service.js";
 import {
   createAgentController,
   deleteUserController,
@@ -17,7 +18,7 @@ router.use(authenticate, authorize("TENANT_ADMIN"), requireTenant);
 
 router.get("/", getUsersController);
 
-router.post("/", createAgentController);
+router.post("/", requireUsageLimit("maxActiveAgents"), createAgentController);
 
 router.get("/:userId", getUserController);
 

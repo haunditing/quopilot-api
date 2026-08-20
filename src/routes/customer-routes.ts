@@ -10,6 +10,7 @@ import { authenticate } from "../middleware/auth-middleware.js";
 import { authorize } from "../middleware/authorize.js";
 import { requireTenant } from "../middleware/tenant-middleware.js";
 import { requireCapability } from "../middleware/entitlement-middleware.js";
+import { requireUsageLimit } from "../services/usage-limit-service.js";
 
 const router = Router();
 
@@ -23,6 +24,7 @@ router.post(
   authorize("TENANT_ADMIN", "AGENT"),
   requireTenant,
   requireCapability("customers.create"),
+  requireUsageLimit("maxCustomers"),
   createCustomerController,
 );
 

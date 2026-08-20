@@ -10,11 +10,12 @@ import {
 import { authenticate } from "../middleware/auth-middleware.js";
 import { requireTenant } from "../middleware/tenant-middleware.js";
 import { requireCapability } from "../middleware/entitlement-middleware.js";
+import { requireUsageLimit } from "../services/usage-limit-service.js";
 import { getQuoteByIdController } from "../controllers/quote-controller.js";
 
 const router = Router();
 
-router.post("/", authenticate, requireTenant, requireCapability("quotes.create"), createQuoteController);
+router.post("/", authenticate, requireTenant, requireCapability("quotes.create"), requireUsageLimit("maxQuotesPerMonth"), createQuoteController);
 
 router.patch("/:quoteId", authenticate, requireTenant, requireCapability("quotes.update"), updateQuoteController);
 
