@@ -1,3 +1,5 @@
+import { registerCapabilities } from "../../../capabilities/registry.js";
+
 import { getCustomers } from "../../customer-query-service.js";
 import { updateCustomer as updateCustomerRecord } from "../../customer-service.js";
 import { getQuotes } from "../../quote-query-service.js";
@@ -221,3 +223,33 @@ export const customerTools: AgentTool[] = [
   getCustomerHistoryTool,
   updateCustomerTool,
 ];
+
+registerCapabilities([
+  {
+    module: "agent",
+    code: "agent.searchCustomers",
+    name: "searchCustomers",
+    description:
+      "Busca clientes del tenant por nombre, teléfono o correo electrónico.",
+    kind: "IA",
+    dependencies: [{ code: "customers.view", type: "OBLIGATORIA" }],
+  },
+  {
+    module: "agent",
+    code: "agent.getCustomerHistory",
+    name: "getCustomerHistory",
+    description:
+      "Obtiene el historial comercial de un cliente: ventas, total invertido, última compra y cotizaciones abiertas.",
+    kind: "IA",
+    dependencies: [{ code: "customers.view", type: "OBLIGATORIA" }],
+  },
+  {
+    module: "agent",
+    code: "agent.updateCustomer",
+    name: "updateCustomer",
+    description:
+      "Actualiza datos básicos de un cliente (nombre, correo, teléfono, país).",
+    kind: "IA",
+    dependencies: [{ code: "customers.update", type: "OBLIGATORIA" }],
+  },
+]);

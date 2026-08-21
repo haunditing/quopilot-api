@@ -1,3 +1,5 @@
+import { registerCapability } from "../../../capabilities/registry.js";
+
 import { requestHumanHandoff as requestHumanHandoffRecord } from "../../agent-conversation-service.js";
 import {
   failResult,
@@ -43,3 +45,13 @@ export const requestHumanHandoffTool: AgentTool = {
 };
 
 export const handoffTools: AgentTool[] = [requestHumanHandoffTool];
+
+registerCapability({
+  module: "agent",
+  code: "agent.requestHumanHandoff",
+  name: "requestHumanHandoff",
+  description:
+    "Escala la conversación actual a un agente humano cuando el cliente lo pide o las reglas lo requieren.",
+  kind: "IA",
+  dependencies: [{ code: "conversations.reply", type: "OBLIGATORIA" }],
+});

@@ -1,3 +1,5 @@
+import { registerCapabilities } from "../../../capabilities/registry.js";
+
 import { getSales } from "../../sale-query-service.js";
 import {
   failResult,
@@ -78,3 +80,15 @@ export const getSalesTool: AgentTool = {
 };
 
 export const salesTools: AgentTool[] = [getSalesTool];
+
+registerCapabilities([
+  {
+    module: "agent",
+    code: "agent.getSales",
+    name: "getSales",
+    description:
+      "Consulta las ventas del cliente actual (o de un cliente indicado), con filtros por estado y fechas.",
+    kind: "IA",
+    dependencies: [{ code: "sales.view", type: "OBLIGATORIA" }],
+  },
+]);

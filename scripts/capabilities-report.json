@@ -1,0 +1,1086 @@
+{
+  "generatedAt": "2026-08-21T13:51:21.912Z",
+  "totalCapabilities": 93,
+  "capabilities": [
+    {
+      "module": "agent",
+      "code": "agent.acceptQuote",
+      "name": "acceptQuote",
+      "description": "Acepta una cotización pendiente del cliente, confirmando automáticamente la venta.",
+      "kind": "IA",
+      "dependencies": [
+        {
+          "code": "quotes.accept",
+          "type": "OBLIGATORIA"
+        },
+        {
+          "code": "agent.createQuote",
+          "type": "OPCIONAL"
+        }
+      ]
+    },
+    {
+      "module": "agent",
+      "code": "agent.assistant",
+      "name": "Asistente interno del agente",
+      "description": "Asistente IA de apoyo para administradores dentro del módulo de agente (consultas y acciones guiadas).",
+      "kind": "IA",
+      "dependencies": [
+        {
+          "code": "agent.chat",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "agent",
+      "code": "agent.chat",
+      "name": "Chat de agente (bandeja IA)",
+      "description": "Gestionar conversaciones atendidas por el agente IA desde la bandeja interna.",
+      "kind": "IA",
+      "dependencies": []
+    },
+    {
+      "module": "agent",
+      "code": "agent.configure",
+      "name": "Configurar agente IA",
+      "description": "Ver y editar la configuración del agente IA (personalidad, catálogo, herramientas).",
+      "kind": "EDICION",
+      "dependencies": []
+    },
+    {
+      "module": "agent",
+      "code": "agent.createQuote",
+      "name": "createQuote",
+      "description": "Crea una cotización en borrador para un cliente con productos y cantidades, vinculada a la conversación.",
+      "kind": "IA",
+      "dependencies": [
+        {
+          "code": "quotes.create",
+          "type": "OBLIGATORIA"
+        },
+        {
+          "code": "agent.searchProducts",
+          "type": "OPCIONAL"
+        }
+      ]
+    },
+    {
+      "module": "agent",
+      "code": "agent.dashboard",
+      "name": "Dashboard del agente",
+      "description": "Resumen operativo para el rol agente (sus conversaciones y desempeño).",
+      "kind": "ANALISIS",
+      "dependencies": []
+    },
+    {
+      "module": "agent",
+      "code": "agent.getCustomerHistory",
+      "name": "getCustomerHistory",
+      "description": "Obtiene el historial comercial de un cliente: ventas, total invertido, última compra y cotizaciones abiertas.",
+      "kind": "IA",
+      "dependencies": [
+        {
+          "code": "customers.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "agent",
+      "code": "agent.getProductDetails",
+      "name": "getProductDetails",
+      "description": "Obtiene los detalles completos de un producto del catálogo por su ID.",
+      "kind": "IA",
+      "dependencies": [
+        {
+          "code": "products.detail",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "agent",
+      "code": "agent.getQuotes",
+      "name": "getQuotes",
+      "description": "Lista las cotizaciones del cliente actual con filtros opcionales por estado y número.",
+      "kind": "IA",
+      "dependencies": [
+        {
+          "code": "quotes.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "agent",
+      "code": "agent.getQuoteStatus",
+      "name": "getQuoteStatus",
+      "description": "Obtiene el estado actual de una cotización: estado, totales, vencimiento y último evento.",
+      "kind": "IA",
+      "dependencies": [
+        {
+          "code": "quotes.detail",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "agent",
+      "code": "agent.getSales",
+      "name": "getSales",
+      "description": "Consulta las ventas del cliente actual (o de un cliente indicado), con filtros por estado y fechas.",
+      "kind": "IA",
+      "dependencies": [
+        {
+          "code": "sales.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "agent",
+      "code": "agent.publicChat",
+      "name": "Chat público con clientes",
+      "description": "Chat web público: clientes inician conversaciones, reciben y envían mensajes, y cierran el chat.",
+      "kind": "COMUNICACION",
+      "dependencies": [
+        {
+          "code": "channels.view",
+          "type": "OPCIONAL"
+        }
+      ]
+    },
+    {
+      "module": "agent",
+      "code": "agent.requestHumanHandoff",
+      "name": "requestHumanHandoff",
+      "description": "Escala la conversación actual a un agente humano cuando el cliente lo pide o las reglas lo requieren.",
+      "kind": "IA",
+      "dependencies": [
+        {
+          "code": "conversations.reply",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "agent",
+      "code": "agent.searchCustomers",
+      "name": "searchCustomers",
+      "description": "Busca clientes del tenant por nombre, teléfono o correo electrónico.",
+      "kind": "IA",
+      "dependencies": [
+        {
+          "code": "customers.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "agent",
+      "code": "agent.searchProducts",
+      "name": "searchProducts",
+      "description": "Busca productos del catálogo por nombre, SKU o descripción, con filtros opcionales de moneda y precio máximo.",
+      "kind": "IA",
+      "dependencies": [
+        {
+          "code": "products.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "agent",
+      "code": "agent.updateCustomer",
+      "name": "updateCustomer",
+      "description": "Actualiza datos básicos de un cliente (nombre, correo, teléfono, país).",
+      "kind": "IA",
+      "dependencies": [
+        {
+          "code": "customers.update",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "agent",
+      "code": "agent.updateQuote",
+      "name": "updateQuote",
+      "description": "Modifica una cotización en borrador reemplazando su lista de productos y cantidades.",
+      "kind": "IA",
+      "dependencies": [
+        {
+          "code": "agent.createQuote",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "auth",
+      "code": "auth.changePassword",
+      "name": "Cambiar contraseña",
+      "description": "Cambio de contraseña del usuario autenticado.",
+      "kind": "SEGURIDAD",
+      "dependencies": []
+    },
+    {
+      "module": "auth",
+      "code": "auth.login",
+      "name": "Iniciar sesión",
+      "description": "Autenticación de usuarios del tenant.",
+      "kind": "AUTENTICACION",
+      "dependencies": []
+    },
+    {
+      "module": "catalog",
+      "code": "catalog.aiTools",
+      "name": "Ver catálogo de herramientas IA",
+      "description": "Catálogo global de herramientas de IA registradas.",
+      "kind": "VISUALIZACION",
+      "dependencies": []
+    },
+    {
+      "module": "catalog",
+      "code": "catalog.capabilities",
+      "name": "Ver catálogo de capacidades",
+      "description": "Catálogo global de capacidades activas por módulo.",
+      "kind": "VISUALIZACION",
+      "dependencies": []
+    },
+    {
+      "module": "catalog",
+      "code": "catalog.features",
+      "name": "Ver catálogo de features",
+      "description": "Catálogo global de features activas de la plataforma.",
+      "kind": "VISUALIZACION",
+      "dependencies": []
+    },
+    {
+      "module": "catalog",
+      "code": "catalog.sync",
+      "name": "Sincronizar catálogo",
+      "description": "Sincronizar manualmente el catálogo (features/capacidades/herramientas) con los registros declarativos.",
+      "kind": "CREACION",
+      "dependencies": [
+        {
+          "code": "catalog.features",
+          "type": "OBLIGATORIA"
+        },
+        {
+          "code": "catalog.capabilities",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "catalog",
+      "code": "catalog.usageLimits",
+      "name": "Ver catálogo de límites de uso",
+      "description": "Catálogo global de métricas/límites de uso configurables.",
+      "kind": "VISUALIZACION",
+      "dependencies": []
+    },
+    {
+      "module": "channels",
+      "code": "channels.changeStatus",
+      "name": "Activar/desactivar canal",
+      "description": "Cambiar el estado ACTIVO/INACTIVO de un canal.",
+      "kind": "CAMBIO_ESTADO",
+      "dependencies": [
+        {
+          "code": "channels.detail",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "channels",
+      "code": "channels.create",
+      "name": "Conectar canal",
+      "description": "Conectar un canal nuevo (p. ej. WhatsApp) al tenant.",
+      "kind": "CREACION",
+      "dependencies": [
+        {
+          "code": "channels.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "channels",
+      "code": "channels.delete",
+      "name": "Eliminar canal",
+      "description": "Desconectar y eliminar un canal del tenant.",
+      "kind": "ELIMINACION",
+      "dependencies": [
+        {
+          "code": "channels.detail",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "channels",
+      "code": "channels.detail",
+      "name": "Ver detalle de canal",
+      "description": "Detalle y estado de conexión de un canal.",
+      "kind": "VISUALIZACION",
+      "dependencies": [
+        {
+          "code": "channels.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "channels",
+      "code": "channels.update",
+      "name": "Editar canal",
+      "description": "Editar la configuración de un canal existente.",
+      "kind": "EDICION",
+      "dependencies": [
+        {
+          "code": "channels.detail",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "channels",
+      "code": "channels.view",
+      "name": "Listar canales",
+      "description": "Lista los canales de mensajería conectados del tenant.",
+      "kind": "VISUALIZACION",
+      "dependencies": []
+    },
+    {
+      "module": "conversations",
+      "code": "conversations.claim",
+      "name": "Tomar conversación",
+      "description": "Reclamar/asignarse una conversación para atención humana.",
+      "kind": "OPERACION_COMERCIAL",
+      "dependencies": [
+        {
+          "code": "conversations.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "conversations",
+      "code": "conversations.messages",
+      "name": "Ver mensajes de conversación",
+      "description": "Historial de mensajes e indicador de escritura de una conversación.",
+      "kind": "VISUALIZACION",
+      "dependencies": [
+        {
+          "code": "conversations.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "conversations",
+      "code": "conversations.reopen",
+      "name": "Reabrir conversación",
+      "description": "Reabrir una conversación cerrada o resuelta.",
+      "kind": "CAMBIO_ESTADO",
+      "dependencies": [
+        {
+          "code": "conversations.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "conversations",
+      "code": "conversations.reply",
+      "name": "Responder conversación",
+      "description": "Enviar mensajes al cliente y notificar escritura en una conversación.",
+      "kind": "COMUNICACION",
+      "dependencies": [
+        {
+          "code": "conversations.messages",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "conversations",
+      "code": "conversations.view",
+      "name": "Bandeja de conversaciones",
+      "description": "Lista/pagina las conversaciones de los canales del tenant.",
+      "kind": "VISUALIZACION",
+      "dependencies": []
+    },
+    {
+      "module": "customers",
+      "code": "customers.create",
+      "name": "Crear cliente",
+      "description": "Registrar un cliente nuevo (empresa o persona).",
+      "kind": "CREACION",
+      "dependencies": []
+    },
+    {
+      "module": "customers",
+      "code": "customers.delete",
+      "name": "Eliminar cliente",
+      "description": "Eliminar un cliente del tenant.",
+      "kind": "ELIMINACION",
+      "dependencies": [
+        {
+          "code": "customers.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "customers",
+      "code": "customers.detail",
+      "name": "Ver ficha de cliente",
+      "description": "Detalle completo de un cliente (contacto, facturación, identificación).",
+      "kind": "VISUALIZACION",
+      "dependencies": [
+        {
+          "code": "customers.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "customers",
+      "code": "customers.update",
+      "name": "Editar cliente",
+      "description": "Editar un cliente existente.",
+      "kind": "EDICION",
+      "dependencies": [
+        {
+          "code": "customers.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "customers",
+      "code": "customers.view",
+      "name": "Listar clientes",
+      "description": "Lista/pagina clientes con búsqueda y filtro por país.",
+      "kind": "VISUALIZACION",
+      "dependencies": []
+    },
+    {
+      "module": "dashboard",
+      "code": "dashboard.view",
+      "name": "Ver dashboard principal",
+      "description": "Resumen operativo del tenant (cotizaciones, ventas, conversaciones y métricas clave).",
+      "kind": "ANALISIS",
+      "dependencies": []
+    },
+    {
+      "module": "internalAssistant",
+      "code": "internalAssistant.chat",
+      "name": "Conversar con asistente interno",
+      "description": "Enviar consultas al asistente IA interno (gestión de tenants, políticas y operación).",
+      "kind": "IA",
+      "dependencies": [
+        {
+          "code": "internalAssistant.viewMessages",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "internalAssistant",
+      "code": "internalAssistant.reset",
+      "name": "Reiniciar asistente interno",
+      "description": "Reiniciar la conversación con el asistente IA interno.",
+      "kind": "IA",
+      "dependencies": [
+        {
+          "code": "internalAssistant.chat",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "internalAssistant",
+      "code": "internalAssistant.viewMessages",
+      "name": "Ver historial del asistente interno",
+      "description": "Historial de la conversación con el asistente IA interno para super admins.",
+      "kind": "IA",
+      "dependencies": []
+    },
+    {
+      "module": "products",
+      "code": "products.changeStatus",
+      "name": "Activar/desactivar producto",
+      "description": "Cambiar el estado ACTIVO/INACTIVO de un producto.",
+      "kind": "CAMBIO_ESTADO",
+      "dependencies": [
+        {
+          "code": "products.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "products",
+      "code": "products.create",
+      "name": "Crear producto",
+      "description": "Crear producto/servicio/combo, incluida el alta rápida.",
+      "kind": "CREACION",
+      "dependencies": []
+    },
+    {
+      "module": "products",
+      "code": "products.delete",
+      "name": "Eliminar producto",
+      "description": "Eliminar un producto del catálogo.",
+      "kind": "ELIMINACION",
+      "dependencies": [
+        {
+          "code": "products.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "products",
+      "code": "products.detail",
+      "name": "Ver ficha de producto",
+      "description": "Detalle completo: precios, listas de precio, bodegas, impuestos, imagen.",
+      "kind": "VISUALIZACION",
+      "dependencies": [
+        {
+          "code": "products.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "products",
+      "code": "products.update",
+      "name": "Editar producto",
+      "description": "Editar un producto (precios, impuestos, bodegas, imagen).",
+      "kind": "EDICION",
+      "dependencies": [
+        {
+          "code": "products.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "products",
+      "code": "products.view",
+      "name": "Listar productos",
+      "description": "Lista/pagina productos, servicios y combos con filtros.",
+      "kind": "VISUALIZACION",
+      "dependencies": []
+    },
+    {
+      "module": "quotes",
+      "code": "quotes.accept",
+      "name": "Aceptar cotización",
+      "description": "Aceptar una cotización enviada; genera automáticamente la venta.",
+      "kind": "OPERACION_COMERCIAL",
+      "dependencies": [
+        {
+          "code": "quotes.send",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "quotes",
+      "code": "quotes.create",
+      "name": "Crear cotización",
+      "description": "Crear una cotización en borrador con cliente e ítems.",
+      "kind": "CREACION",
+      "dependencies": []
+    },
+    {
+      "module": "quotes",
+      "code": "quotes.detail",
+      "name": "Ver detalle de cotización",
+      "description": "Detalle completo, ítems y eventos/historial de la cotización.",
+      "kind": "VISUALIZACION",
+      "dependencies": [
+        {
+          "code": "quotes.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "quotes",
+      "code": "quotes.pdf",
+      "name": "Descargar cotización PDF",
+      "description": "Generar y descargar el documento PDF de la cotización.",
+      "kind": "DOCUMENTO",
+      "dependencies": [
+        {
+          "code": "quotes.detail",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "quotes",
+      "code": "quotes.send",
+      "name": "Enviar cotización",
+      "description": "Entregar la cotización al cliente (marcar como enviada).",
+      "kind": "COMUNICACION",
+      "dependencies": [
+        {
+          "code": "quotes.detail",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "quotes",
+      "code": "quotes.update",
+      "name": "Editar cotización",
+      "description": "Editar ítems y datos de una cotización.",
+      "kind": "EDICION",
+      "dependencies": [
+        {
+          "code": "quotes.view",
+          "type": "OBLIGATORIA"
+        },
+        {
+          "code": "quotes.create",
+          "type": "OPCIONAL"
+        }
+      ]
+    },
+    {
+      "module": "quotes",
+      "code": "quotes.view",
+      "name": "Listar cotizaciones",
+      "description": "Lista/pagina cotizaciones con filtros por estado, cliente y búsqueda.",
+      "kind": "VISUALIZACION",
+      "dependencies": []
+    },
+    {
+      "module": "sales",
+      "code": "sales.cancel",
+      "name": "Anular venta",
+      "description": "Anula una venta confirmada (cambio de estado a CANCELLED).",
+      "kind": "CAMBIO_ESTADO",
+      "dependencies": [
+        {
+          "code": "sales.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "sales",
+      "code": "sales.delete",
+      "name": "Eliminar venta",
+      "description": "Elimina una venta del tenant.",
+      "kind": "ELIMINACION",
+      "dependencies": [
+        {
+          "code": "sales.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "sales",
+      "code": "sales.detail",
+      "name": "Ver detalle de venta",
+      "description": "Detalle completo de una venta confirmada.",
+      "kind": "VISUALIZACION",
+      "dependencies": [
+        {
+          "code": "sales.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "sales",
+      "code": "sales.view",
+      "name": "Listar ventas",
+      "description": "Lista/pagina ventas con filtros por estado, cliente y fechas.",
+      "kind": "VISUALIZACION",
+      "dependencies": []
+    },
+    {
+      "module": "superAdmin",
+      "code": "superAdmin.assistantCapabilities",
+      "name": "Permisos de herramientas IA por plan",
+      "description": "Configurar qué herramientas del asistente IA están disponibles por plan.",
+      "kind": "SEGURIDAD",
+      "dependencies": [
+        {
+          "code": "superAdmin.plans.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "superAdmin",
+      "code": "superAdmin.commercialPolicy",
+      "name": "Política comercial global",
+      "description": "Ver y editar la política comercial aplicada a los agentes IA.",
+      "kind": "EDICION",
+      "dependencies": []
+    },
+    {
+      "module": "superAdmin",
+      "code": "superAdmin.dashboard",
+      "name": "Dashboard super admin",
+      "description": "Resumen global de la plataforma (tenants, ingresos, uso agregado).",
+      "kind": "ANALISIS",
+      "dependencies": []
+    },
+    {
+      "module": "superAdmin",
+      "code": "superAdmin.plans.capabilities",
+      "name": "Capacidades por plan",
+      "description": "Consultar y actualizar las capacidades efectivas incluidas en cada plan.",
+      "kind": "EDICION",
+      "dependencies": [
+        {
+          "code": "superAdmin.plans.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "superAdmin",
+      "code": "superAdmin.plans.features",
+      "name": "Features por plan",
+      "description": "Consultar y actualizar las features habilitadas por plan.",
+      "kind": "EDICION",
+      "dependencies": [
+        {
+          "code": "superAdmin.plans.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "superAdmin",
+      "code": "superAdmin.plans.manage",
+      "name": "Administrar planes",
+      "description": "Crear, editar, eliminar planes y marcar el plan por defecto.",
+      "kind": "EDICION",
+      "dependencies": [
+        {
+          "code": "superAdmin.plans.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "superAdmin",
+      "code": "superAdmin.plans.view",
+      "name": "Ver planes",
+      "description": "Lista y detalle de planes de suscripción.",
+      "kind": "VISUALIZACION",
+      "dependencies": []
+    },
+    {
+      "module": "superAdmin",
+      "code": "superAdmin.supportAssistantConfig",
+      "name": "Configuración de soporte IA",
+      "description": "Ver y editar la configuración global del asistente de soporte con IA.",
+      "kind": "EDICION",
+      "dependencies": []
+    },
+    {
+      "module": "supportAssistant",
+      "code": "supportAssistant.cases",
+      "name": "Casos de soporte",
+      "description": "Gestionar casos generados por el asistente (listar, crear, actualizar, confirmar, eliminar).",
+      "kind": "EDICION",
+      "dependencies": [
+        {
+          "code": "supportAssistant.messages",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "supportAssistant",
+      "code": "supportAssistant.knowledge",
+      "name": "Base de conocimiento",
+      "description": "Administrar documentos de conocimiento (crear, editar, eliminar) usados por el asistente de soporte.",
+      "kind": "EDICION",
+      "dependencies": [
+        {
+          "code": "supportAssistant.messages",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "supportAssistant",
+      "code": "supportAssistant.messages",
+      "name": "Mensajes de soporte IA",
+      "description": "Consultar y enviar mensajes al asistente de soporte con IA para usuarios del tenant.",
+      "kind": "IA",
+      "dependencies": []
+    },
+    {
+      "module": "supportAssistant",
+      "code": "supportAssistant.metrics",
+      "name": "Métricas de soporte",
+      "description": "Indicadores de uso y resolución del asistente de soporte.",
+      "kind": "ANALISIS",
+      "dependencies": [
+        {
+          "code": "supportAssistant.messages",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "supportAssistant",
+      "code": "supportAssistant.reset",
+      "name": "Reiniciar conversación de soporte",
+      "description": "Reiniciar la conversación con el asistente de soporte.",
+      "kind": "IA",
+      "dependencies": [
+        {
+          "code": "supportAssistant.messages",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "tenants",
+      "code": "tenants.changePlan",
+      "name": "Cambiar plan de tenant",
+      "description": "Asignar o cambiar el plan de suscripción de un tenant.",
+      "kind": "CAMBIO_ESTADO",
+      "dependencies": [
+        {
+          "code": "tenants.detail",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "tenants",
+      "code": "tenants.changeStatus",
+      "name": "Cambiar estado de tenant",
+      "description": "Activar/suspender un tenant (cambio de estado de la cuenta).",
+      "kind": "SEGURIDAD",
+      "dependencies": [
+        {
+          "code": "tenants.detail",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "tenants",
+      "code": "tenants.create",
+      "name": "Crear tenant",
+      "description": "Registrar un tenant nuevo en la plataforma.",
+      "kind": "CREACION",
+      "dependencies": [
+        {
+          "code": "tenants.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "tenants",
+      "code": "tenants.dashboard",
+      "name": "Dashboard del tenant",
+      "description": "Resumen administrativo del tenant (usuarios, canales y consumo).",
+      "kind": "ANALISIS",
+      "dependencies": [
+        {
+          "code": "tenants.me",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "tenants",
+      "code": "tenants.detail",
+      "name": "Ver detalle de tenant",
+      "description": "Detalle completo de un tenant, incluyendo usuarios y suscripción.",
+      "kind": "VISUALIZACION",
+      "dependencies": [
+        {
+          "code": "tenants.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "tenants",
+      "code": "tenants.me",
+      "name": "Ver mi tenant",
+      "description": "Información del tenant al que pertenece el usuario autenticado.",
+      "kind": "VISUALIZACION",
+      "dependencies": []
+    },
+    {
+      "module": "tenants",
+      "code": "tenants.meCapabilities",
+      "name": "Ver mis capacidades",
+      "description": "Capacidades efectivas del plan actual del tenant autenticado.",
+      "kind": "VISUALIZACION",
+      "dependencies": [
+        {
+          "code": "tenants.me",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "tenants",
+      "code": "tenants.meUsage",
+      "name": "Ver mi consumo",
+      "description": "Uso de recursos del tenant (límites y consumo vigente).",
+      "kind": "ANALISIS",
+      "dependencies": [
+        {
+          "code": "tenants.me",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "tenants",
+      "code": "tenants.update",
+      "name": "Editar tenant",
+      "description": "Editar datos de un tenant (super admin).",
+      "kind": "EDICION",
+      "dependencies": [
+        {
+          "code": "tenants.detail",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "tenants",
+      "code": "tenants.updateMe",
+      "name": "Editar mi tenant",
+      "description": "Actualizar datos propios del tenant (nombre, configuración básica).",
+      "kind": "EDICION",
+      "dependencies": [
+        {
+          "code": "tenants.me",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "tenants",
+      "code": "tenants.view",
+      "name": "Listar tenants",
+      "description": "Lista/pagina todos los tenants registrados (super admin).",
+      "kind": "VISUALIZACION",
+      "dependencies": []
+    },
+    {
+      "module": "users",
+      "code": "users.changeStatus",
+      "name": "Activar/desactivar usuario",
+      "description": "Cambiar el estado ACTIVO/INACTIVO de un usuario.",
+      "kind": "SEGURIDAD",
+      "dependencies": [
+        {
+          "code": "users.detail",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "users",
+      "code": "users.create",
+      "name": "Crear usuario/agente",
+      "description": "Registrar un usuario o agente nuevo en el tenant.",
+      "kind": "CREACION",
+      "dependencies": [
+        {
+          "code": "users.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "users",
+      "code": "users.delete",
+      "name": "Eliminar usuario",
+      "description": "Eliminar un usuario del tenant.",
+      "kind": "ELIMINACION",
+      "dependencies": [
+        {
+          "code": "users.detail",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "users",
+      "code": "users.detail",
+      "name": "Ver detalle de usuario",
+      "description": "Detalle de un usuario del tenant (rol, estado, datos).",
+      "kind": "VISUALIZACION",
+      "dependencies": [
+        {
+          "code": "users.view",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "users",
+      "code": "users.update",
+      "name": "Editar usuario",
+      "description": "Editar datos y rol de un usuario del tenant.",
+      "kind": "EDICION",
+      "dependencies": [
+        {
+          "code": "users.detail",
+          "type": "OBLIGATORIA"
+        }
+      ]
+    },
+    {
+      "module": "users",
+      "code": "users.view",
+      "name": "Listar usuarios",
+      "description": "Lista los usuarios/agentes del tenant.",
+      "kind": "VISUALIZACION",
+      "dependencies": []
+    },
+    {
+      "module": "webhooks",
+      "code": "webhooks.receive",
+      "name": "Recepción de eventos de canal",
+      "description": "Recepción y procesamiento de mensajes/eventos entrantes de los canales conectados.",
+      "kind": "COMUNICACION",
+      "dependencies": [
+        {
+          "code": "webhooks.verify",
+          "type": "OPCIONAL"
+        }
+      ]
+    },
+    {
+      "module": "webhooks",
+      "code": "webhooks.verify",
+      "name": "Verificación de webhook",
+      "description": "Handshake de verificación entrante de proveedores de mensajería por canal.",
+      "kind": "SEGURIDAD",
+      "dependencies": []
+    }
+  ]
+}

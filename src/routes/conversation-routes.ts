@@ -13,6 +13,8 @@ import { authorize } from "../middleware/authorize.js";
 import { requireTenant } from "../middleware/tenant-middleware.js";
 import { requireCapability } from "../middleware/entitlement-middleware.js";
 
+import "../capabilities/conversations.js";
+
 const router = Router();
 
 router.get(

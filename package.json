@@ -10,7 +10,9 @@
     "seed": "tsx scripts/seed-admin.ts",
     "seed:plans": "tsx scripts/seed-plans.ts",
     "seed:demo": "tsx scripts/seed-demo-tenant.ts",
-    "seed:data": "tsx scripts/seed-demo-data.ts"
+    "seed:data": "tsx scripts/seed-demo-data.ts",
+    "catalog:reconcile": "tsx scripts/reconcile-catalog.ts",
+    "catalog:apply": "tsx scripts/reconcile-catalog.ts --apply"
   },
   "keywords": [],
   "author": "",

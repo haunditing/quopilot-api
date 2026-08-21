@@ -5,6 +5,9 @@ import { AIAssistantTool } from "../models/AIAssistantTool.js";
 import { syncCatalogManually } from "../services/feature-sync-service.js";
 import { authenticate } from "../middleware/auth-middleware.js";
 import { authorize } from "../middleware/authorize.js";
+import { getCapabilitiesReport } from "../capabilities/index.js";
+
+import "../capabilities/catalog.js";
 
 const router = Router();
 
@@ -58,12 +61,42 @@ router.get("/usage-limits", async (_req, res) => {
   }
 });
 
-router.post("/sync-catalog", async (_req, res) => {
+router.post("/sync-catalog", async (req, res) => {
   try {
-    const result = await (await import("../services/feature-sync-service.js")).syncCatalogManually();
+    const dryRun = req.query.dryRun === "true";
+    const result = await (await import("../services/feature-sync-service.js")).syncCatalogManually({ dryRun });
+
+    // Respuesta plana retrocompatible + detalle de reconciliación.
     res.status(200).json({
-      message: "Catalog synchronized successfully",
-      ...result,
+      message: dryRun
+        ? "Catalog reconciliation preview (dry run, nothing written)"
+        : "Catalog synchronized successfully",
+      featuresCreated: result.features.added,
+      featuresUpdated: result.features.updated,
+      toolsCreated: result.tools.added,
+      toolsUpdated: result.tools.updated,
+      capabilitiesCreated: result.capabilities.added,
+      capabilitiesUpdated: result.capabilities.updated,
+      usageLimitsCreated: result.usageLimits.added,
+      usageLimitsUpdated: result.usageLimits.updated,
+      dynamicNewCapabilities: result.capabilities.added,
+      dynamicUpdatedCapabilities: result.capabilities.updated,
+      dynamicTotalDetected: getCapabilitiesReport().totalCapabilities,
+      detail: {
+        dryRun: result.dryRun,
+        features: result.features,
+        capabilities: result.capabilities,
+        tools: result.tools,
+        usageLimits: result.usageLimits,
+        pruning: result.pruning,
+        integrity: {
+          valid: result.integrity.valid,
+          errorCount: result.integrity.errors.length,
+          warningCount: result.integrity.warnings.length,
+          errors: result.integrity.errors,
+          warnings: result.integrity.warnings,
+        },
+      },
     });
   } catch (error) {
     console.error(error);

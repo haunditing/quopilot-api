@@ -28,6 +28,7 @@ import planRoutes from "./routes/plan-routes.js";
 import assistantCapabilitiesRoutes from "./routes/assistant-capabilities-routes.js";
 import catalogRoutes from "./routes/catalog-routes.js";
 import commercialPolicyRoutes from "./routes/commercial-policy-routes.js";
+import { getCapabilitiesReport } from "./capabilities/index.js";
 
 type RawBodyRequest = Request & {
   rawBody?: Buffer;
@@ -56,6 +57,10 @@ app.get("/api/auth/me", authenticate, (req: AuthenticatedRequest, res) => {
   res.json({
     user: req.user,
   });
+});
+
+app.get("/api/capabilities", (_req, res) => {
+  res.json(getCapabilitiesReport());
 });
 
 app.use("/api/auth", authRoutes);

@@ -8,6 +8,8 @@ import {
 import { authenticate } from "../middleware/auth-middleware.js";
 import { authorize } from "../middleware/authorize.js";
 
+import "../capabilities/superAdmin.js";
+
 const router = Router();
 
 router.use(authenticate, authorize("SUPER_ADMIN"));

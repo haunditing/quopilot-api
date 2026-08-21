@@ -13,6 +13,8 @@ import { requireCapability } from "../middleware/entitlement-middleware.js";
 import { requireUsageLimit } from "../services/usage-limit-service.js";
 import { getQuoteByIdController } from "../controllers/quote-controller.js";
 
+import "../capabilities/quotes.js";
+
 const router = Router();
 
 router.post("/", authenticate, requireTenant, requireCapability("quotes.create"), requireUsageLimit("quotes.maxMonthly"), createQuoteController);

@@ -1,3 +1,5 @@
+import { registerCapabilities } from "../../../capabilities/registry.js";
+
 import { getProducts, getProductById } from "../../product-query-service.js";
 import {
   failResult,
@@ -136,3 +138,24 @@ export const productTools: AgentTool[] = [
   searchProductsTool,
   getProductDetailsTool,
 ];
+
+registerCapabilities([
+  {
+    module: "agent",
+    code: "agent.searchProducts",
+    name: "searchProducts",
+    description:
+      "Busca productos del catálogo por nombre, SKU o descripción, con filtros opcionales de moneda y precio máximo.",
+    kind: "IA",
+    dependencies: [{ code: "products.view", type: "OBLIGATORIA" }],
+  },
+  {
+    module: "agent",
+    code: "agent.getProductDetails",
+    name: "getProductDetails",
+    description:
+      "Obtiene los detalles completos de un producto del catálogo por su ID.",
+    kind: "IA",
+    dependencies: [{ code: "products.detail", type: "OBLIGATORIA" }],
+  },
+]);

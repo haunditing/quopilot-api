@@ -12,6 +12,8 @@ import {
   updateUserStatusController,
 } from "../controllers/user-controller.js";
 
+import "../capabilities/users.js";
+
 const router = Router();
 
 router.use(authenticate, authorize("TENANT_ADMIN"), requireTenant);

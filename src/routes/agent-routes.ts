@@ -20,6 +20,8 @@ import { requireTenant } from "../middleware/tenant-middleware.js";
 import { requireCapability } from "../middleware/entitlement-middleware.js";
 import "../services/agent-config-assistant.js";
 
+import "../capabilities/agent.js";
+
 const router = Router();
 
 router.get(

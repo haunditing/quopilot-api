@@ -3,6 +3,8 @@ import { getTenantDashboardController } from "../controllers/tenant-dashboard-co
 import { authenticate } from "../middleware/auth-middleware.js";
 import { requireTenant } from "../middleware/tenant-middleware.js";
 
+import "../capabilities/tenants.js";
+
 const router = Router();
 
 router.get(

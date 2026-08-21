@@ -220,7 +220,7 @@ export async function validateCatalogIntegrity(): Promise<CatalogIntegrityReport
     AppCapability.find({ isActive: true }).lean(),
   ]);
 
-  const activeFeatureKeys = new Set(features.map((f) => f.key));
+  const activeFeatureKeys = new Set(features.map((f) => f.key.toLowerCase()));
   const capabilityMap = new Map<string, (typeof capabilities)[0]>();
 
   // Regla 2: Unicidad de código
@@ -234,7 +234,7 @@ export async function validateCatalogIntegrity(): Promise<CatalogIntegrityReport
 
   for (const c of capabilities) {
     // Regla 1: Feature válida
-    if (c.configurableByPlan && !activeFeatureKeys.has(c.module)) {
+    if (c.configurableByPlan && !activeFeatureKeys.has(c.module.toLowerCase())) {
       errors.push(
         `Regla 1 (Feature válida): Capacidad "${c.code}" pertenece al módulo "${c.module}" que no es una feature activa`,
       );

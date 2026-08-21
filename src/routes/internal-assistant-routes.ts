@@ -9,6 +9,8 @@ import { authorize } from "../middleware/authorize.js";
 import { requireTenant } from "../middleware/tenant-middleware.js";
 import "../services/internal-tenant-assistant.js";
 
+import "../capabilities/internalAssistant.js";
+
 const router = Router();
 
 router.use(authenticate, authorize("SUPER_ADMIN"), requireTenant);

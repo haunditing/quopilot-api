@@ -1,3 +1,5 @@
+import { registerCapabilities } from "../../../capabilities/registry.js";
+
 import { Types } from "mongoose";
 import { getQuotes, getQuoteStatus } from "../../quote-query-service.js";
 import { createQuote, updateQuote } from "../../quote-service.js";
@@ -429,3 +431,57 @@ export const quoteTools: AgentTool[] = [
   updateQuoteTool,
   acceptQuoteTool,
 ];
+
+registerCapabilities([
+  {
+    module: "agent",
+    code: "agent.getQuotes",
+    name: "getQuotes",
+    description:
+      "Lista las cotizaciones del cliente actual con filtros opcionales por estado y número.",
+    kind: "IA",
+    dependencies: [{ code: "quotes.view", type: "OBLIGATORIA" }],
+  },
+  {
+    module: "agent",
+    code: "agent.getQuoteStatus",
+    name: "getQuoteStatus",
+    description:
+      "Obtiene el estado actual de una cotización: estado, totales, vencimiento y último evento.",
+    kind: "IA",
+    dependencies: [{ code: "quotes.detail", type: "OBLIGATORIA" }],
+  },
+  {
+    module: "agent",
+    code: "agent.createQuote",
+    name: "createQuote",
+    description:
+      "Crea una cotización en borrador para un cliente con productos y cantidades, vinculada a la conversación.",
+    kind: "IA",
+    dependencies: [
+      { code: "quotes.create", type: "OBLIGATORIA" },
+      { code: "agent.searchProducts", type: "OPCIONAL" },
+    ],
+  },
+  {
+    module: "agent",
+    code: "agent.updateQuote",
+    name: "updateQuote",
+    description:
+      "Modifica una cotización en borrador reemplazando su lista de productos y cantidades.",
+    kind: "IA",
+    dependencies: [{ code: "agent.createQuote", type: "OBLIGATORIA" }],
+  },
+  {
+    module: "agent",
+    code: "agent.acceptQuote",
+    name: "acceptQuote",
+    description:
+      "Acepta una cotización pendiente del cliente, confirmando automáticamente la venta.",
+    kind: "IA",
+    dependencies: [
+      { code: "quotes.accept", type: "OBLIGATORIA" },
+      { code: "agent.createQuote", type: "OPCIONAL" },
+    ],
+  },
+]);

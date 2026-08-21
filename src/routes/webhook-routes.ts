@@ -4,6 +4,8 @@ import {
   handleWebhookVerification,
 } from "../controllers/webhook-controller.js";
 
+import "../capabilities/webhooks.js";
+
 const router = Router();
 
 router.get("/:type/:channelId", handleWebhookVerification);

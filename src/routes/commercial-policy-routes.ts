@@ -7,6 +7,8 @@ import {
   updatePlatformCommercialPolicy,
 } from "../services/commercial-policy-service.js";
 
+import "../capabilities/superAdmin.js";
+
 const router = Router();
 
 router.use(authenticate, authorize("SUPER_ADMIN"));

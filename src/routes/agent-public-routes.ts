@@ -15,6 +15,8 @@ import {
   publicChatTypingLimiter,
 } from "../config/rate-limit.js";
 
+import "../capabilities/agent.js";
+
 const router = Router();
 
 router.get(

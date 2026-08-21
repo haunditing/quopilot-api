@@ -20,6 +20,8 @@ import { authenticate } from "../middleware/auth-middleware.js";
 import { authorize } from "../middleware/authorize.js";
 import { requireTenant } from "../middleware/tenant-middleware.js";
 
+import "../capabilities/supportAssistant.js";
+
 const router = Router();
 
 router.use(authenticate, authorize("TENANT_ADMIN"), requireTenant);

@@ -19,6 +19,8 @@ import {
   updateTenantSubscriptionController,
 } from "../controllers/tenant-controller.js";
 
+import "../capabilities/tenants.js";
+
 const router = Router();
 
 router.get("/me", authenticate, requireTenant, getCurrentTenantController);
