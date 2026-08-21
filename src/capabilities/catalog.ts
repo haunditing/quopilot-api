@@ -1,9 +1,16 @@
 import { registerCapabilities } from "./registry.js";
+import {
+  ALL_PLANS,
+  ROLES_SUPER_ADMIN,
+} from "./presets.js";
 
 registerCapabilities([
   {
     module: "catalog",
     code: "catalog.features",
+    domain: "SUPER_ADMIN",
+    allowedRoles: ROLES_SUPER_ADMIN,
+    includedInPlans: ALL_PLANS,
     name: "Ver catálogo de features",
     description: "Catálogo global de features activas de la plataforma.",
     kind: "VISUALIZACION",
@@ -12,6 +19,9 @@ registerCapabilities([
   {
     module: "catalog",
     code: "catalog.aiTools",
+    domain: "SUPER_ADMIN",
+    allowedRoles: ROLES_SUPER_ADMIN,
+    includedInPlans: ALL_PLANS,
     name: "Ver catálogo de herramientas IA",
     description: "Catálogo global de herramientas de IA registradas.",
     kind: "VISUALIZACION",
@@ -20,6 +30,9 @@ registerCapabilities([
   {
     module: "catalog",
     code: "catalog.capabilities",
+    domain: "SUPER_ADMIN",
+    allowedRoles: ROLES_SUPER_ADMIN,
+    includedInPlans: ALL_PLANS,
     name: "Ver catálogo de capacidades",
     description: "Catálogo global de capacidades activas por módulo.",
     kind: "VISUALIZACION",
@@ -28,6 +41,9 @@ registerCapabilities([
   {
     module: "catalog",
     code: "catalog.usageLimits",
+    domain: "SUPER_ADMIN",
+    allowedRoles: ROLES_SUPER_ADMIN,
+    includedInPlans: ALL_PLANS,
     name: "Ver catálogo de límites de uso",
     description: "Catálogo global de métricas/límites de uso configurables.",
     kind: "VISUALIZACION",
@@ -36,9 +52,11 @@ registerCapabilities([
   {
     module: "catalog",
     code: "catalog.sync",
+    domain: "SUPER_ADMIN",
+    allowedRoles: ROLES_SUPER_ADMIN,
+    includedInPlans: ALL_PLANS,
     name: "Sincronizar catálogo",
-    description:
-      "Sincronizar manualmente el catálogo (features/capacidades/herramientas) con los registros declarativos.",
+    description: "Sincronizar manualmente el catálogo con los registros declarativos.",
     kind: "CREACION",
     dependencies: [
       { code: "catalog.features", type: "OBLIGATORIA" },

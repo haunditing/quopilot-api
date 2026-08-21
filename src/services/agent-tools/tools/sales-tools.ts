@@ -1,4 +1,5 @@
 import { registerCapabilities } from "../../../capabilities/registry.js";
+import { ROLES_COMMERCIAL, PLANS_PRO_UP } from "../../../capabilities/presets.js";
 
 import { getSales } from "../../sale-query-service.js";
 import {
@@ -85,6 +86,9 @@ registerCapabilities([
   {
     module: "agent",
     code: "agent.getSales",
+    domain: "COMMERCIAL",
+    allowedRoles: ROLES_COMMERCIAL,
+    includedInPlans: PLANS_PRO_UP,
     name: "getSales",
     description:
       "Consulta las ventas del cliente actual (o de un cliente indicado), con filtros por estado y fechas.",

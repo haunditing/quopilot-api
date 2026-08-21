@@ -3,6 +3,7 @@ import { Tenant } from "../../models/Tenant.js";
 import type { AgentTool as AgentToolCapability } from "../../models/Agent.js";
 import type { AgentToolDefinition } from "../llm-service.js";
 import { getEffectiveCapabilityCodes } from "../capability-service.js";
+import { getCapabilityByCode } from "../../capabilities/index.js";
 import { productTools } from "./tools/product-tools.js";
 import { customerTools } from "./tools/customer-tools.js";
 import { quoteTools } from "./tools/quote-tools.js";
@@ -135,6 +136,16 @@ export async function executeTool(
 
   if (capability && !isToolEnabled(capability, ctx.agent)) {
     return failResult(`Tool is not enabled: ${name}`);
+  }
+
+  // El contexto del agente es comercial: solo puede invocar herramientas
+  // cuyo dominio declarado sea COMMERCIAL.
+  const declaredCapability = getCapabilityByCode(`agent.${name}`);
+
+  if (declaredCapability && declaredCapability.domain !== "COMMERCIAL") {
+    return failResult(
+      `Tool domain not allowed for commercial agent context: ${name} (${declaredCapability.domain})`,
+    );
   }
 
   // Validar capability de negocio efectiva del tenant

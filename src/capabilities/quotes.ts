@@ -1,9 +1,16 @@
 import { registerCapabilities } from "./registry.js";
+import {
+  ALL_PLANS,
+  ROLES_COMMERCIAL,
+} from "./presets.js";
 
 registerCapabilities([
   {
     module: "quotes",
     code: "quotes.view",
+    domain: "COMMERCIAL",
+    allowedRoles: ROLES_COMMERCIAL,
+    includedInPlans: ALL_PLANS,
     name: "Listar cotizaciones",
     description: "Lista/pagina cotizaciones con filtros por estado, cliente y búsqueda.",
     kind: "VISUALIZACION",
@@ -12,14 +19,22 @@ registerCapabilities([
   {
     module: "quotes",
     code: "quotes.detail",
+    domain: "COMMERCIAL",
+    allowedRoles: ROLES_COMMERCIAL,
+    includedInPlans: ALL_PLANS,
     name: "Ver detalle de cotización",
     description: "Detalle completo, ítems y eventos/historial de la cotización.",
     kind: "VISUALIZACION",
-    dependencies: [{ code: "quotes.view", type: "OBLIGATORIA" }],
+    dependencies: [
+      { code: "quotes.view", type: "OBLIGATORIA" },
+    ],
   },
   {
     module: "quotes",
     code: "quotes.create",
+    domain: "COMMERCIAL",
+    allowedRoles: ROLES_COMMERCIAL,
+    includedInPlans: ALL_PLANS,
     name: "Crear cotización",
     description: "Crear una cotización en borrador con cliente e ítems.",
     kind: "CREACION",
@@ -28,6 +43,9 @@ registerCapabilities([
   {
     module: "quotes",
     code: "quotes.update",
+    domain: "COMMERCIAL",
+    allowedRoles: ROLES_COMMERCIAL,
+    includedInPlans: ALL_PLANS,
     name: "Editar cotización",
     description: "Editar ítems y datos de una cotización.",
     kind: "EDICION",
@@ -39,25 +57,40 @@ registerCapabilities([
   {
     module: "quotes",
     code: "quotes.send",
+    domain: "COMMERCIAL",
+    allowedRoles: ROLES_COMMERCIAL,
+    includedInPlans: ALL_PLANS,
     name: "Enviar cotización",
     description: "Entregar la cotización al cliente (marcar como enviada).",
     kind: "COMUNICACION",
-    dependencies: [{ code: "quotes.detail", type: "OBLIGATORIA" }],
+    dependencies: [
+      { code: "quotes.detail", type: "OBLIGATORIA" },
+    ],
   },
   {
     module: "quotes",
     code: "quotes.accept",
+    domain: "COMMERCIAL",
+    allowedRoles: ROLES_COMMERCIAL,
+    includedInPlans: ALL_PLANS,
     name: "Aceptar cotización",
     description: "Aceptar una cotización enviada; genera automáticamente la venta.",
     kind: "OPERACION_COMERCIAL",
-    dependencies: [{ code: "quotes.send", type: "OBLIGATORIA" }],
+    dependencies: [
+      { code: "quotes.send", type: "OBLIGATORIA" },
+    ],
   },
   {
     module: "quotes",
     code: "quotes.pdf",
+    domain: "COMMERCIAL",
+    allowedRoles: ROLES_COMMERCIAL,
+    includedInPlans: ALL_PLANS,
     name: "Descargar cotización PDF",
     description: "Generar y descargar el documento PDF de la cotización.",
     kind: "DOCUMENTO",
-    dependencies: [{ code: "quotes.detail", type: "OBLIGATORIA" }],
+    dependencies: [
+      { code: "quotes.detail", type: "OBLIGATORIA" },
+    ],
   },
 ]);

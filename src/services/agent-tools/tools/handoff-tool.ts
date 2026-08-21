@@ -1,4 +1,5 @@
 import { registerCapability } from "../../../capabilities/registry.js";
+import { ROLES_COMMERCIAL, PLANS_PRO_UP } from "../../../capabilities/presets.js";
 
 import { requestHumanHandoff as requestHumanHandoffRecord } from "../../agent-conversation-service.js";
 import {
@@ -49,6 +50,9 @@ export const handoffTools: AgentTool[] = [requestHumanHandoffTool];
 registerCapability({
   module: "agent",
   code: "agent.requestHumanHandoff",
+    domain: "COMMERCIAL",
+    allowedRoles: ROLES_COMMERCIAL,
+    includedInPlans: PLANS_PRO_UP,
   name: "requestHumanHandoff",
   description:
     "Escala la conversación actual a un agente humano cuando el cliente lo pide o las reglas lo requieren.",

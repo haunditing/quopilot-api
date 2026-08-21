@@ -1,4 +1,5 @@
 import { registerCapabilities } from "../../../capabilities/registry.js";
+import { ROLES_COMMERCIAL, PLANS_PRO_UP } from "../../../capabilities/presets.js";
 
 import { Types } from "mongoose";
 import { getQuotes, getQuoteStatus } from "../../quote-query-service.js";
@@ -436,6 +437,9 @@ registerCapabilities([
   {
     module: "agent",
     code: "agent.getQuotes",
+    domain: "COMMERCIAL",
+    allowedRoles: ROLES_COMMERCIAL,
+    includedInPlans: PLANS_PRO_UP,
     name: "getQuotes",
     description:
       "Lista las cotizaciones del cliente actual con filtros opcionales por estado y número.",
@@ -445,6 +449,9 @@ registerCapabilities([
   {
     module: "agent",
     code: "agent.getQuoteStatus",
+    domain: "COMMERCIAL",
+    allowedRoles: ROLES_COMMERCIAL,
+    includedInPlans: PLANS_PRO_UP,
     name: "getQuoteStatus",
     description:
       "Obtiene el estado actual de una cotización: estado, totales, vencimiento y último evento.",
@@ -454,6 +461,9 @@ registerCapabilities([
   {
     module: "agent",
     code: "agent.createQuote",
+    domain: "COMMERCIAL",
+    allowedRoles: ROLES_COMMERCIAL,
+    includedInPlans: PLANS_PRO_UP,
     name: "createQuote",
     description:
       "Crea una cotización en borrador para un cliente con productos y cantidades, vinculada a la conversación.",
@@ -466,6 +476,9 @@ registerCapabilities([
   {
     module: "agent",
     code: "agent.updateQuote",
+    domain: "COMMERCIAL",
+    allowedRoles: ROLES_COMMERCIAL,
+    includedInPlans: PLANS_PRO_UP,
     name: "updateQuote",
     description:
       "Modifica una cotización en borrador reemplazando su lista de productos y cantidades.",
@@ -475,6 +488,9 @@ registerCapabilities([
   {
     module: "agent",
     code: "agent.acceptQuote",
+    domain: "COMMERCIAL",
+    allowedRoles: ROLES_COMMERCIAL,
+    includedInPlans: PLANS_PRO_UP,
     name: "acceptQuote",
     description:
       "Acepta una cotización pendiente del cliente, confirmando automáticamente la venta.",

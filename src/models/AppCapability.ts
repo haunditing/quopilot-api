@@ -36,6 +36,9 @@ export interface IAppCapability extends Document {
   kind: CapabilityKind;
   configurableByPlan: boolean;
   nonConfigurableReason?: string;
+  domain?: "COMMERCIAL" | "ADMINISTRATION" | "SUPER_ADMIN";
+  allowedRoles?: string[];
+  includedInPlans?: string[];
   dependencies: ICapabilityDependency[];
   evidence: string;
   status: CapabilityStatus;
@@ -117,6 +120,23 @@ const appCapabilitySchema = new Schema<IAppCapability>(
     configurableByPlan: {
       type: Boolean,
       default: true,
+    },
+
+    domain: {
+      type: String,
+      enum: ["COMMERCIAL", "ADMINISTRATION", "SUPER_ADMIN"],
+      default: "ADMINISTRATION",
+      index: true,
+    },
+
+    allowedRoles: {
+      type: [String],
+      default: [],
+    },
+
+    includedInPlans: {
+      type: [String],
+      default: [],
     },
 
     nonConfigurableReason: {

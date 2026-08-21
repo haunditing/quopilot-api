@@ -1,4 +1,5 @@
 import { registerCapabilities } from "../../../capabilities/registry.js";
+import { ROLES_COMMERCIAL, PLANS_PRO_UP } from "../../../capabilities/presets.js";
 
 import { getCustomers } from "../../customer-query-service.js";
 import { updateCustomer as updateCustomerRecord } from "../../customer-service.js";
@@ -228,6 +229,9 @@ registerCapabilities([
   {
     module: "agent",
     code: "agent.searchCustomers",
+    domain: "COMMERCIAL",
+    allowedRoles: ROLES_COMMERCIAL,
+    includedInPlans: PLANS_PRO_UP,
     name: "searchCustomers",
     description:
       "Busca clientes del tenant por nombre, teléfono o correo electrónico.",
@@ -237,6 +241,9 @@ registerCapabilities([
   {
     module: "agent",
     code: "agent.getCustomerHistory",
+    domain: "COMMERCIAL",
+    allowedRoles: ROLES_COMMERCIAL,
+    includedInPlans: PLANS_PRO_UP,
     name: "getCustomerHistory",
     description:
       "Obtiene el historial comercial de un cliente: ventas, total invertido, última compra y cotizaciones abiertas.",
@@ -246,6 +253,9 @@ registerCapabilities([
   {
     module: "agent",
     code: "agent.updateCustomer",
+    domain: "COMMERCIAL",
+    allowedRoles: ROLES_COMMERCIAL,
+    includedInPlans: PLANS_PRO_UP,
     name: "updateCustomer",
     description:
       "Actualiza datos básicos de un cliente (nombre, correo, teléfono, país).",

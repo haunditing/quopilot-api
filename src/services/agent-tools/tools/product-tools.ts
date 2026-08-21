@@ -1,4 +1,5 @@
 import { registerCapabilities } from "../../../capabilities/registry.js";
+import { ROLES_COMMERCIAL, PLANS_PRO_UP } from "../../../capabilities/presets.js";
 
 import { getProducts, getProductById } from "../../product-query-service.js";
 import {
@@ -143,6 +144,9 @@ registerCapabilities([
   {
     module: "agent",
     code: "agent.searchProducts",
+    domain: "COMMERCIAL",
+    allowedRoles: ROLES_COMMERCIAL,
+    includedInPlans: PLANS_PRO_UP,
     name: "searchProducts",
     description:
       "Busca productos del catálogo por nombre, SKU o descripción, con filtros opcionales de moneda y precio máximo.",
@@ -152,6 +156,9 @@ registerCapabilities([
   {
     module: "agent",
     code: "agent.getProductDetails",
+    domain: "COMMERCIAL",
+    allowedRoles: ROLES_COMMERCIAL,
+    includedInPlans: PLANS_PRO_UP,
     name: "getProductDetails",
     description:
       "Obtiene los detalles completos de un producto del catálogo por su ID.",

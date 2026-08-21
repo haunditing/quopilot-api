@@ -1,10 +1,19 @@
 {
-  "generatedAt": "2026-08-21T13:51:21.912Z",
+  "generatedAt": "2026-08-21T15:22:30.764Z",
   "totalCapabilities": 93,
   "capabilities": [
     {
       "module": "agent",
       "code": "agent.acceptQuote",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "acceptQuote",
       "description": "Acepta una cotización pendiente del cliente, confirmando automáticamente la venta.",
       "kind": "IA",
@@ -22,8 +31,17 @@
     {
       "module": "agent",
       "code": "agent.assistant",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Asistente interno del agente",
-      "description": "Asistente IA de apoyo para administradores dentro del módulo de agente (consultas y acciones guiadas).",
+      "description": "Asistente IA de apoyo para administradores dentro del módulo de agente.",
       "kind": "IA",
       "dependencies": [
         {
@@ -35,6 +53,15 @@
     {
       "module": "agent",
       "code": "agent.chat",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Chat de agente (bandeja IA)",
       "description": "Gestionar conversaciones atendidas por el agente IA desde la bandeja interna.",
       "kind": "IA",
@@ -43,6 +70,15 @@
     {
       "module": "agent",
       "code": "agent.configure",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Configurar agente IA",
       "description": "Ver y editar la configuración del agente IA (personalidad, catálogo, herramientas).",
       "kind": "EDICION",
@@ -51,6 +87,15 @@
     {
       "module": "agent",
       "code": "agent.createQuote",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "createQuote",
       "description": "Crea una cotización en borrador para un cliente con productos y cantidades, vinculada a la conversación.",
       "kind": "IA",
@@ -68,6 +113,16 @@
     {
       "module": "agent",
       "code": "agent.dashboard",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Dashboard del agente",
       "description": "Resumen operativo para el rol agente (sus conversaciones y desempeño).",
       "kind": "ANALISIS",
@@ -76,6 +131,15 @@
     {
       "module": "agent",
       "code": "agent.getCustomerHistory",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "getCustomerHistory",
       "description": "Obtiene el historial comercial de un cliente: ventas, total invertido, última compra y cotizaciones abiertas.",
       "kind": "IA",
@@ -89,6 +153,15 @@
     {
       "module": "agent",
       "code": "agent.getProductDetails",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "getProductDetails",
       "description": "Obtiene los detalles completos de un producto del catálogo por su ID.",
       "kind": "IA",
@@ -102,6 +175,15 @@
     {
       "module": "agent",
       "code": "agent.getQuotes",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "getQuotes",
       "description": "Lista las cotizaciones del cliente actual con filtros opcionales por estado y número.",
       "kind": "IA",
@@ -115,6 +197,15 @@
     {
       "module": "agent",
       "code": "agent.getQuoteStatus",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "getQuoteStatus",
       "description": "Obtiene el estado actual de una cotización: estado, totales, vencimiento y último evento.",
       "kind": "IA",
@@ -128,6 +219,15 @@
     {
       "module": "agent",
       "code": "agent.getSales",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "getSales",
       "description": "Consulta las ventas del cliente actual (o de un cliente indicado), con filtros por estado y fechas.",
       "kind": "IA",
@@ -141,8 +241,17 @@
     {
       "module": "agent",
       "code": "agent.publicChat",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Chat público con clientes",
-      "description": "Chat web público: clientes inician conversaciones, reciben y envían mensajes, y cierran el chat.",
+      "description": "Chat web público: clientes inician conversaciones, reciben y envían mensajes.",
       "kind": "COMUNICACION",
       "dependencies": [
         {
@@ -154,6 +263,15 @@
     {
       "module": "agent",
       "code": "agent.requestHumanHandoff",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "requestHumanHandoff",
       "description": "Escala la conversación actual a un agente humano cuando el cliente lo pide o las reglas lo requieren.",
       "kind": "IA",
@@ -167,6 +285,15 @@
     {
       "module": "agent",
       "code": "agent.searchCustomers",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "searchCustomers",
       "description": "Busca clientes del tenant por nombre, teléfono o correo electrónico.",
       "kind": "IA",
@@ -180,6 +307,15 @@
     {
       "module": "agent",
       "code": "agent.searchProducts",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "searchProducts",
       "description": "Busca productos del catálogo por nombre, SKU o descripción, con filtros opcionales de moneda y precio máximo.",
       "kind": "IA",
@@ -193,6 +329,15 @@
     {
       "module": "agent",
       "code": "agent.updateCustomer",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "updateCustomer",
       "description": "Actualiza datos básicos de un cliente (nombre, correo, teléfono, país).",
       "kind": "IA",
@@ -206,6 +351,15 @@
     {
       "module": "agent",
       "code": "agent.updateQuote",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "updateQuote",
       "description": "Modifica una cotización en borrador reemplazando su lista de productos y cantidades.",
       "kind": "IA",
@@ -219,6 +373,18 @@
     {
       "module": "auth",
       "code": "auth.changePassword",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN",
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Cambiar contraseña",
       "description": "Cambio de contraseña del usuario autenticado.",
       "kind": "SEGURIDAD",
@@ -227,6 +393,18 @@
     {
       "module": "auth",
       "code": "auth.login",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN",
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Iniciar sesión",
       "description": "Autenticación de usuarios del tenant.",
       "kind": "AUTENTICACION",
@@ -235,6 +413,15 @@
     {
       "module": "catalog",
       "code": "catalog.aiTools",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Ver catálogo de herramientas IA",
       "description": "Catálogo global de herramientas de IA registradas.",
       "kind": "VISUALIZACION",
@@ -243,6 +430,15 @@
     {
       "module": "catalog",
       "code": "catalog.capabilities",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Ver catálogo de capacidades",
       "description": "Catálogo global de capacidades activas por módulo.",
       "kind": "VISUALIZACION",
@@ -251,6 +447,15 @@
     {
       "module": "catalog",
       "code": "catalog.features",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Ver catálogo de features",
       "description": "Catálogo global de features activas de la plataforma.",
       "kind": "VISUALIZACION",
@@ -259,8 +464,17 @@
     {
       "module": "catalog",
       "code": "catalog.sync",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Sincronizar catálogo",
-      "description": "Sincronizar manualmente el catálogo (features/capacidades/herramientas) con los registros declarativos.",
+      "description": "Sincronizar manualmente el catálogo con los registros declarativos.",
       "kind": "CREACION",
       "dependencies": [
         {
@@ -276,6 +490,15 @@
     {
       "module": "catalog",
       "code": "catalog.usageLimits",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Ver catálogo de límites de uso",
       "description": "Catálogo global de métricas/límites de uso configurables.",
       "kind": "VISUALIZACION",
@@ -284,6 +507,16 @@
     {
       "module": "channels",
       "code": "channels.changeStatus",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Activar/desactivar canal",
       "description": "Cambiar el estado ACTIVO/INACTIVO de un canal.",
       "kind": "CAMBIO_ESTADO",
@@ -297,6 +530,16 @@
     {
       "module": "channels",
       "code": "channels.create",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Conectar canal",
       "description": "Conectar un canal nuevo (p. ej. WhatsApp) al tenant.",
       "kind": "CREACION",
@@ -310,6 +553,16 @@
     {
       "module": "channels",
       "code": "channels.delete",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Eliminar canal",
       "description": "Desconectar y eliminar un canal del tenant.",
       "kind": "ELIMINACION",
@@ -323,6 +576,16 @@
     {
       "module": "channels",
       "code": "channels.detail",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Ver detalle de canal",
       "description": "Detalle y estado de conexión de un canal.",
       "kind": "VISUALIZACION",
@@ -336,6 +599,16 @@
     {
       "module": "channels",
       "code": "channels.update",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Editar canal",
       "description": "Editar la configuración de un canal existente.",
       "kind": "EDICION",
@@ -349,6 +622,16 @@
     {
       "module": "channels",
       "code": "channels.view",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Listar canales",
       "description": "Lista los canales de mensajería conectados del tenant.",
       "kind": "VISUALIZACION",
@@ -357,6 +640,16 @@
     {
       "module": "conversations",
       "code": "conversations.claim",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Tomar conversación",
       "description": "Reclamar/asignarse una conversación para atención humana.",
       "kind": "OPERACION_COMERCIAL",
@@ -370,6 +663,16 @@
     {
       "module": "conversations",
       "code": "conversations.messages",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Ver mensajes de conversación",
       "description": "Historial de mensajes e indicador de escritura de una conversación.",
       "kind": "VISUALIZACION",
@@ -383,6 +686,16 @@
     {
       "module": "conversations",
       "code": "conversations.reopen",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Reabrir conversación",
       "description": "Reabrir una conversación cerrada o resuelta.",
       "kind": "CAMBIO_ESTADO",
@@ -396,6 +709,16 @@
     {
       "module": "conversations",
       "code": "conversations.reply",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Responder conversación",
       "description": "Enviar mensajes al cliente y notificar escritura en una conversación.",
       "kind": "COMUNICACION",
@@ -409,6 +732,16 @@
     {
       "module": "conversations",
       "code": "conversations.view",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Bandeja de conversaciones",
       "description": "Lista/pagina las conversaciones de los canales del tenant.",
       "kind": "VISUALIZACION",
@@ -417,6 +750,16 @@
     {
       "module": "customers",
       "code": "customers.create",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Crear cliente",
       "description": "Registrar un cliente nuevo (empresa o persona).",
       "kind": "CREACION",
@@ -425,6 +768,16 @@
     {
       "module": "customers",
       "code": "customers.delete",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Eliminar cliente",
       "description": "Eliminar un cliente del tenant.",
       "kind": "ELIMINACION",
@@ -438,6 +791,16 @@
     {
       "module": "customers",
       "code": "customers.detail",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Ver ficha de cliente",
       "description": "Detalle completo de un cliente (contacto, facturación, identificación).",
       "kind": "VISUALIZACION",
@@ -451,6 +814,16 @@
     {
       "module": "customers",
       "code": "customers.update",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Editar cliente",
       "description": "Editar un cliente existente.",
       "kind": "EDICION",
@@ -464,6 +837,16 @@
     {
       "module": "customers",
       "code": "customers.view",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Listar clientes",
       "description": "Lista/pagina clientes con búsqueda y filtro por país.",
       "kind": "VISUALIZACION",
@@ -472,6 +855,17 @@
     {
       "module": "dashboard",
       "code": "dashboard.view",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Ver dashboard principal",
       "description": "Resumen operativo del tenant (cotizaciones, ventas, conversaciones y métricas clave).",
       "kind": "ANALISIS",
@@ -480,6 +874,15 @@
     {
       "module": "internalAssistant",
       "code": "internalAssistant.chat",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Conversar con asistente interno",
       "description": "Enviar consultas al asistente IA interno (gestión de tenants, políticas y operación).",
       "kind": "IA",
@@ -493,6 +896,15 @@
     {
       "module": "internalAssistant",
       "code": "internalAssistant.reset",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Reiniciar asistente interno",
       "description": "Reiniciar la conversación con el asistente IA interno.",
       "kind": "IA",
@@ -506,6 +918,15 @@
     {
       "module": "internalAssistant",
       "code": "internalAssistant.viewMessages",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Ver historial del asistente interno",
       "description": "Historial de la conversación con el asistente IA interno para super admins.",
       "kind": "IA",
@@ -514,6 +935,16 @@
     {
       "module": "products",
       "code": "products.changeStatus",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Activar/desactivar producto",
       "description": "Cambiar el estado ACTIVO/INACTIVO de un producto.",
       "kind": "CAMBIO_ESTADO",
@@ -527,6 +958,16 @@
     {
       "module": "products",
       "code": "products.create",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Crear producto",
       "description": "Crear producto/servicio/combo, incluida el alta rápida.",
       "kind": "CREACION",
@@ -535,6 +976,16 @@
     {
       "module": "products",
       "code": "products.delete",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Eliminar producto",
       "description": "Eliminar un producto del catálogo.",
       "kind": "ELIMINACION",
@@ -548,6 +999,16 @@
     {
       "module": "products",
       "code": "products.detail",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Ver ficha de producto",
       "description": "Detalle completo: precios, listas de precio, bodegas, impuestos, imagen.",
       "kind": "VISUALIZACION",
@@ -561,6 +1022,16 @@
     {
       "module": "products",
       "code": "products.update",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Editar producto",
       "description": "Editar un producto (precios, impuestos, bodegas, imagen).",
       "kind": "EDICION",
@@ -574,6 +1045,16 @@
     {
       "module": "products",
       "code": "products.view",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Listar productos",
       "description": "Lista/pagina productos, servicios y combos con filtros.",
       "kind": "VISUALIZACION",
@@ -582,6 +1063,16 @@
     {
       "module": "quotes",
       "code": "quotes.accept",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Aceptar cotización",
       "description": "Aceptar una cotización enviada; genera automáticamente la venta.",
       "kind": "OPERACION_COMERCIAL",
@@ -595,6 +1086,16 @@
     {
       "module": "quotes",
       "code": "quotes.create",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Crear cotización",
       "description": "Crear una cotización en borrador con cliente e ítems.",
       "kind": "CREACION",
@@ -603,6 +1104,16 @@
     {
       "module": "quotes",
       "code": "quotes.detail",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Ver detalle de cotización",
       "description": "Detalle completo, ítems y eventos/historial de la cotización.",
       "kind": "VISUALIZACION",
@@ -616,6 +1127,16 @@
     {
       "module": "quotes",
       "code": "quotes.pdf",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Descargar cotización PDF",
       "description": "Generar y descargar el documento PDF de la cotización.",
       "kind": "DOCUMENTO",
@@ -629,6 +1150,16 @@
     {
       "module": "quotes",
       "code": "quotes.send",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Enviar cotización",
       "description": "Entregar la cotización al cliente (marcar como enviada).",
       "kind": "COMUNICACION",
@@ -642,6 +1173,16 @@
     {
       "module": "quotes",
       "code": "quotes.update",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Editar cotización",
       "description": "Editar ítems y datos de una cotización.",
       "kind": "EDICION",
@@ -659,6 +1200,16 @@
     {
       "module": "quotes",
       "code": "quotes.view",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Listar cotizaciones",
       "description": "Lista/pagina cotizaciones con filtros por estado, cliente y búsqueda.",
       "kind": "VISUALIZACION",
@@ -667,6 +1218,16 @@
     {
       "module": "sales",
       "code": "sales.cancel",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Anular venta",
       "description": "Anula una venta confirmada (cambio de estado a CANCELLED).",
       "kind": "CAMBIO_ESTADO",
@@ -680,6 +1241,16 @@
     {
       "module": "sales",
       "code": "sales.delete",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Eliminar venta",
       "description": "Elimina una venta del tenant.",
       "kind": "ELIMINACION",
@@ -693,6 +1264,16 @@
     {
       "module": "sales",
       "code": "sales.detail",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Ver detalle de venta",
       "description": "Detalle completo de una venta confirmada.",
       "kind": "VISUALIZACION",
@@ -706,6 +1287,16 @@
     {
       "module": "sales",
       "code": "sales.view",
+      "domain": "COMMERCIAL",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Listar ventas",
       "description": "Lista/pagina ventas con filtros por estado, cliente y fechas.",
       "kind": "VISUALIZACION",
@@ -714,6 +1305,15 @@
     {
       "module": "superAdmin",
       "code": "superAdmin.assistantCapabilities",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Permisos de herramientas IA por plan",
       "description": "Configurar qué herramientas del asistente IA están disponibles por plan.",
       "kind": "SEGURIDAD",
@@ -727,6 +1327,15 @@
     {
       "module": "superAdmin",
       "code": "superAdmin.commercialPolicy",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Política comercial global",
       "description": "Ver y editar la política comercial aplicada a los agentes IA.",
       "kind": "EDICION",
@@ -735,6 +1344,15 @@
     {
       "module": "superAdmin",
       "code": "superAdmin.dashboard",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Dashboard super admin",
       "description": "Resumen global de la plataforma (tenants, ingresos, uso agregado).",
       "kind": "ANALISIS",
@@ -743,6 +1361,15 @@
     {
       "module": "superAdmin",
       "code": "superAdmin.plans.capabilities",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Capacidades por plan",
       "description": "Consultar y actualizar las capacidades efectivas incluidas en cada plan.",
       "kind": "EDICION",
@@ -756,6 +1383,15 @@
     {
       "module": "superAdmin",
       "code": "superAdmin.plans.features",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Features por plan",
       "description": "Consultar y actualizar las features habilitadas por plan.",
       "kind": "EDICION",
@@ -769,6 +1405,15 @@
     {
       "module": "superAdmin",
       "code": "superAdmin.plans.manage",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Administrar planes",
       "description": "Crear, editar, eliminar planes y marcar el plan por defecto.",
       "kind": "EDICION",
@@ -782,6 +1427,15 @@
     {
       "module": "superAdmin",
       "code": "superAdmin.plans.view",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Ver planes",
       "description": "Lista y detalle de planes de suscripción.",
       "kind": "VISUALIZACION",
@@ -790,6 +1444,15 @@
     {
       "module": "superAdmin",
       "code": "superAdmin.supportAssistantConfig",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Configuración de soporte IA",
       "description": "Ver y editar la configuración global del asistente de soporte con IA.",
       "kind": "EDICION",
@@ -798,6 +1461,17 @@
     {
       "module": "supportAssistant",
       "code": "supportAssistant.cases",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Casos de soporte",
       "description": "Gestionar casos generados por el asistente (listar, crear, actualizar, confirmar, eliminar).",
       "kind": "EDICION",
@@ -811,8 +1485,19 @@
     {
       "module": "supportAssistant",
       "code": "supportAssistant.knowledge",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Base de conocimiento",
-      "description": "Administrar documentos de conocimiento (crear, editar, eliminar) usados por el asistente de soporte.",
+      "description": "Administrar documentos de conocimiento usados por el asistente de soporte.",
       "kind": "EDICION",
       "dependencies": [
         {
@@ -824,6 +1509,17 @@
     {
       "module": "supportAssistant",
       "code": "supportAssistant.messages",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Mensajes de soporte IA",
       "description": "Consultar y enviar mensajes al asistente de soporte con IA para usuarios del tenant.",
       "kind": "IA",
@@ -832,6 +1528,17 @@
     {
       "module": "supportAssistant",
       "code": "supportAssistant.metrics",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Métricas de soporte",
       "description": "Indicadores de uso y resolución del asistente de soporte.",
       "kind": "ANALISIS",
@@ -845,6 +1552,17 @@
     {
       "module": "supportAssistant",
       "code": "supportAssistant.reset",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Reiniciar conversación de soporte",
       "description": "Reiniciar la conversación con el asistente de soporte.",
       "kind": "IA",
@@ -858,6 +1576,15 @@
     {
       "module": "tenants",
       "code": "tenants.changePlan",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Cambiar plan de tenant",
       "description": "Asignar o cambiar el plan de suscripción de un tenant.",
       "kind": "CAMBIO_ESTADO",
@@ -871,6 +1598,15 @@
     {
       "module": "tenants",
       "code": "tenants.changeStatus",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Cambiar estado de tenant",
       "description": "Activar/suspender un tenant (cambio de estado de la cuenta).",
       "kind": "SEGURIDAD",
@@ -884,6 +1620,15 @@
     {
       "module": "tenants",
       "code": "tenants.create",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Crear tenant",
       "description": "Registrar un tenant nuevo en la plataforma.",
       "kind": "CREACION",
@@ -897,6 +1642,16 @@
     {
       "module": "tenants",
       "code": "tenants.dashboard",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Dashboard del tenant",
       "description": "Resumen administrativo del tenant (usuarios, canales y consumo).",
       "kind": "ANALISIS",
@@ -910,6 +1665,15 @@
     {
       "module": "tenants",
       "code": "tenants.detail",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Ver detalle de tenant",
       "description": "Detalle completo de un tenant, incluyendo usuarios y suscripción.",
       "kind": "VISUALIZACION",
@@ -923,6 +1687,17 @@
     {
       "module": "tenants",
       "code": "tenants.me",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Ver mi tenant",
       "description": "Información del tenant al que pertenece el usuario autenticado.",
       "kind": "VISUALIZACION",
@@ -931,6 +1706,17 @@
     {
       "module": "tenants",
       "code": "tenants.meCapabilities",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Ver mis capacidades",
       "description": "Capacidades efectivas del plan actual del tenant autenticado.",
       "kind": "VISUALIZACION",
@@ -944,6 +1730,17 @@
     {
       "module": "tenants",
       "code": "tenants.meUsage",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Ver mi consumo",
       "description": "Uso de recursos del tenant (límites y consumo vigente).",
       "kind": "ANALISIS",
@@ -957,6 +1754,15 @@
     {
       "module": "tenants",
       "code": "tenants.update",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Editar tenant",
       "description": "Editar datos de un tenant (super admin).",
       "kind": "EDICION",
@@ -970,6 +1776,17 @@
     {
       "module": "tenants",
       "code": "tenants.updateMe",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "COMMERCIAL_AGENT",
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Editar mi tenant",
       "description": "Actualizar datos propios del tenant (nombre, configuración básica).",
       "kind": "EDICION",
@@ -983,6 +1800,15 @@
     {
       "module": "tenants",
       "code": "tenants.view",
+      "domain": "SUPER_ADMIN",
+      "allowedRoles": [
+        "SUPER_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Listar tenants",
       "description": "Lista/pagina todos los tenants registrados (super admin).",
       "kind": "VISUALIZACION",
@@ -991,6 +1817,16 @@
     {
       "module": "users",
       "code": "users.changeStatus",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Activar/desactivar usuario",
       "description": "Cambiar el estado ACTIVO/INACTIVO de un usuario.",
       "kind": "SEGURIDAD",
@@ -1004,6 +1840,16 @@
     {
       "module": "users",
       "code": "users.create",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Crear usuario/agente",
       "description": "Registrar un usuario o agente nuevo en el tenant.",
       "kind": "CREACION",
@@ -1017,6 +1863,16 @@
     {
       "module": "users",
       "code": "users.delete",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Eliminar usuario",
       "description": "Eliminar un usuario del tenant.",
       "kind": "ELIMINACION",
@@ -1030,6 +1886,16 @@
     {
       "module": "users",
       "code": "users.detail",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Ver detalle de usuario",
       "description": "Detalle de un usuario del tenant (rol, estado, datos).",
       "kind": "VISUALIZACION",
@@ -1043,6 +1909,16 @@
     {
       "module": "users",
       "code": "users.update",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Editar usuario",
       "description": "Editar datos y rol de un usuario del tenant.",
       "kind": "EDICION",
@@ -1056,6 +1932,16 @@
     {
       "module": "users",
       "code": "users.view",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Listar usuarios",
       "description": "Lista los usuarios/agentes del tenant.",
       "kind": "VISUALIZACION",
@@ -1064,6 +1950,16 @@
     {
       "module": "webhooks",
       "code": "webhooks.receive",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Recepción de eventos de canal",
       "description": "Recepción y procesamiento de mensajes/eventos entrantes de los canales conectados.",
       "kind": "COMUNICACION",
@@ -1077,6 +1973,16 @@
     {
       "module": "webhooks",
       "code": "webhooks.verify",
+      "domain": "ADMINISTRATION",
+      "allowedRoles": [
+        "ADMIN_ASSISTANT",
+        "TENANT_ADMIN"
+      ],
+      "includedInPlans": [
+        "BASIC",
+        "PRO",
+        "ENTERPRISE"
+      ],
       "name": "Verificación de webhook",
       "description": "Handshake de verificación entrante de proveedores de mensajería por canal.",
       "kind": "SEGURIDAD",

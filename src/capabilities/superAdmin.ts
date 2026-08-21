@@ -1,18 +1,27 @@
 import { registerCapabilities } from "./registry.js";
+import {
+  ALL_PLANS,
+  ROLES_SUPER_ADMIN,
+} from "./presets.js";
 
 registerCapabilities([
   {
     module: "superAdmin",
     code: "superAdmin.dashboard",
+    domain: "SUPER_ADMIN",
+    allowedRoles: ROLES_SUPER_ADMIN,
+    includedInPlans: ALL_PLANS,
     name: "Dashboard super admin",
-    description:
-      "Resumen global de la plataforma (tenants, ingresos, uso agregado).",
+    description: "Resumen global de la plataforma (tenants, ingresos, uso agregado).",
     kind: "ANALISIS",
     dependencies: [],
   },
   {
     module: "superAdmin",
     code: "superAdmin.plans.view",
+    domain: "SUPER_ADMIN",
+    allowedRoles: ROLES_SUPER_ADMIN,
+    includedInPlans: ALL_PLANS,
     name: "Ver planes",
     description: "Lista y detalle de planes de suscripción.",
     kind: "VISUALIZACION",
@@ -21,41 +30,61 @@ registerCapabilities([
   {
     module: "superAdmin",
     code: "superAdmin.plans.manage",
+    domain: "SUPER_ADMIN",
+    allowedRoles: ROLES_SUPER_ADMIN,
+    includedInPlans: ALL_PLANS,
     name: "Administrar planes",
-    description:
-      "Crear, editar, eliminar planes y marcar el plan por defecto.",
+    description: "Crear, editar, eliminar planes y marcar el plan por defecto.",
     kind: "EDICION",
-    dependencies: [{ code: "superAdmin.plans.view", type: "OBLIGATORIA" }],
+    dependencies: [
+      { code: "superAdmin.plans.view", type: "OBLIGATORIA" },
+    ],
   },
   {
     module: "superAdmin",
     code: "superAdmin.plans.features",
+    domain: "SUPER_ADMIN",
+    allowedRoles: ROLES_SUPER_ADMIN,
+    includedInPlans: ALL_PLANS,
     name: "Features por plan",
     description: "Consultar y actualizar las features habilitadas por plan.",
     kind: "EDICION",
-    dependencies: [{ code: "superAdmin.plans.view", type: "OBLIGATORIA" }],
+    dependencies: [
+      { code: "superAdmin.plans.view", type: "OBLIGATORIA" },
+    ],
   },
   {
     module: "superAdmin",
     code: "superAdmin.plans.capabilities",
+    domain: "SUPER_ADMIN",
+    allowedRoles: ROLES_SUPER_ADMIN,
+    includedInPlans: ALL_PLANS,
     name: "Capacidades por plan",
-    description:
-      "Consultar y actualizar las capacidades efectivas incluidas en cada plan.",
+    description: "Consultar y actualizar las capacidades efectivas incluidas en cada plan.",
     kind: "EDICION",
-    dependencies: [{ code: "superAdmin.plans.view", type: "OBLIGATORIA" }],
+    dependencies: [
+      { code: "superAdmin.plans.view", type: "OBLIGATORIA" },
+    ],
   },
   {
     module: "superAdmin",
     code: "superAdmin.assistantCapabilities",
+    domain: "SUPER_ADMIN",
+    allowedRoles: ROLES_SUPER_ADMIN,
+    includedInPlans: ALL_PLANS,
     name: "Permisos de herramientas IA por plan",
-    description:
-      "Configurar qué herramientas del asistente IA están disponibles por plan.",
+    description: "Configurar qué herramientas del asistente IA están disponibles por plan.",
     kind: "SEGURIDAD",
-    dependencies: [{ code: "superAdmin.plans.view", type: "OBLIGATORIA" }],
+    dependencies: [
+      { code: "superAdmin.plans.view", type: "OBLIGATORIA" },
+    ],
   },
   {
     module: "superAdmin",
     code: "superAdmin.commercialPolicy",
+    domain: "SUPER_ADMIN",
+    allowedRoles: ROLES_SUPER_ADMIN,
+    includedInPlans: ALL_PLANS,
     name: "Política comercial global",
     description: "Ver y editar la política comercial aplicada a los agentes IA.",
     kind: "EDICION",
@@ -64,9 +93,11 @@ registerCapabilities([
   {
     module: "superAdmin",
     code: "superAdmin.supportAssistantConfig",
+    domain: "SUPER_ADMIN",
+    allowedRoles: ROLES_SUPER_ADMIN,
+    includedInPlans: ALL_PLANS,
     name: "Configuración de soporte IA",
-    description:
-      "Ver y editar la configuración global del asistente de soporte con IA.",
+    description: "Ver y editar la configuración global del asistente de soporte con IA.",
     kind: "EDICION",
     dependencies: [],
   },

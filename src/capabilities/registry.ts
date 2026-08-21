@@ -5,6 +5,19 @@
  * natively in TypeScript code. No regex scanning, no frontend coupling.
  */
 
+export type CapabilityDomain =
+  | "COMMERCIAL"
+  | "ADMINISTRATION"
+  | "SUPER_ADMIN";
+
+export type UserRole =
+  | "COMMERCIAL_AGENT"
+  | "ADMIN_ASSISTANT"
+  | "TENANT_ADMIN"
+  | "SUPER_ADMIN";
+
+export type SubscriptionPlan = "BASIC" | "PRO" | "ENTERPRISE";
+
 export interface Capability {
   module: string;
   code: string;
@@ -23,6 +36,9 @@ export interface Capability {
     | "ELIMINACION"
     | "VISUALIZACION"
     | "IA";
+  domain: CapabilityDomain;
+  allowedRoles: UserRole[];
+  includedInPlans: SubscriptionPlan[];
   dependencies?: { code: string; type: "OBLIGATORIA" | "OPCIONAL" }[];
 }
 
@@ -48,6 +64,10 @@ export function getCapabilities(): Capability[] {
     if (a.module !== b.module) return a.module.localeCompare(b.module);
     return a.code.localeCompare(b.code);
   });
+}
+
+export function getCapabilityByCode(code: string): Capability | undefined {
+  return registry.get(code);
 }
 
 export function getCapabilitiesReport(): {
