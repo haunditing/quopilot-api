@@ -41,7 +41,8 @@ const CANONICAL_PLANS = [
     description: "Plan gratuito con funcionalidades básicas",
     isDefault: true,
     sortOrder: 1,
-    features: ["dashboard", "customers", "products", "quotes", "settings"],
+    features: ["dashboard",
+      "tenants", "customers", "products", "quotes", "settings"],
     limits: {
       "customers.max": 25,
       "products.max": 25,
@@ -59,6 +60,7 @@ const CANONICAL_PLANS = [
     sortOrder: 2,
     features: [
       "dashboard",
+      "tenants",
       "customers",
       "products",
       "quotes",
@@ -83,6 +85,7 @@ const CANONICAL_PLANS = [
     sortOrder: 3,
     features: [
       "dashboard",
+      "tenants",
       "customers",
       "products",
       "quotes",
@@ -110,6 +113,7 @@ const CANONICAL_PLANS = [
     sortOrder: 4,
     features: [
       "dashboard",
+      "tenants",
       "customers",
       "products",
       "quotes",

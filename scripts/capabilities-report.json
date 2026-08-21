@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-21T15:22:30.764Z",
+  "generatedAt": "2026-08-21T16:51:58.760Z",
   "totalCapabilities": 93,
   "capabilities": [
     {
@@ -1778,7 +1778,6 @@
       "code": "tenants.updateMe",
       "domain": "ADMINISTRATION",
       "allowedRoles": [
-        "COMMERCIAL_AGENT",
         "ADMIN_ASSISTANT",
         "TENANT_ADMIN"
       ],

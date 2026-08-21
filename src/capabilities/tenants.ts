@@ -61,7 +61,7 @@ registerCapabilities([
     module: "tenants",
     code: "tenants.updateMe",
     domain: "ADMINISTRATION",
-    allowedRoles: ROLES_ANY_TENANT_USER,
+    allowedRoles: ROLES_TENANT_ADMIN,
     includedInPlans: ALL_PLANS,
     name: "Editar mi tenant",
     description: "Actualizar datos propios del tenant (nombre, configuración básica).",

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth-middleware.js";
 import { authorize } from "../middleware/authorize.js";
+import { requireCapability } from "../middleware/entitlement-middleware.js";
 import { requireTenant } from "../middleware/tenant-middleware.js";
 import {
   createTenantController,
@@ -32,6 +33,7 @@ router.patch(
   authenticate,
   authorize("TENANT_ADMIN"),
   requireTenant,
+  requireCapability("tenants.updateMe"),
   updateCurrentTenantController,
 );
 
