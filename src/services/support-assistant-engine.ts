@@ -14,10 +14,7 @@ import {
   routeIntent,
 } from "./support-intent-router.js";
 import type { SupportModule } from "./support-intent-router.js";
-import {
-  listSupportCases,
-  searchCases,
-} from "./support-case-service.js";
+import { listSupportCases, searchCases } from "./support-case-service.js";
 import {
   listKnowledgeDocs,
   searchKnowledge,
@@ -108,7 +105,10 @@ async function getTenantPlan(tenantId: string): Promise<string> {
   return tenant?.plan ?? "FREE";
 }
 
-async function getOrCreateSupportConversation(tenantId: string, userId: string) {
+async function getOrCreateSupportConversation(
+  tenantId: string,
+  userId: string,
+) {
   const conversation = await SupportConversation.findOneAndUpdate(
     {
       tenantId,
@@ -134,20 +134,23 @@ async function getOrCreateSupportConversation(tenantId: string, userId: string) 
   return conversation;
 }
 
-function buildSystemPrompt(base: string, context: {
-  module?: SupportModule;
-  caseBlock?: string;
-  docsBlock?: string;
-  toolBlock?: string;
-  inScope: boolean;
-  assistantCapabilities: Array<{
-    toolKey: string;
-    allowedActions: string[];
-    executionLevel: string;
-    requiresConfirmation: boolean;
-  }>;
-  executionLevels: Record<string, string>;
-}): string {
+function buildSystemPrompt(
+  base: string,
+  context: {
+    module?: SupportModule;
+    caseBlock?: string;
+    docsBlock?: string;
+    toolBlock?: string;
+    inScope: boolean;
+    assistantCapabilities: Array<{
+      toolKey: string;
+      allowedActions: string[];
+      executionLevel: string;
+      requiresConfirmation: boolean;
+    }>;
+    executionLevels: Record<string, string>;
+  },
+): string {
   const parts: string[] = [];
   parts.push(base.trim());
 
@@ -180,9 +183,11 @@ function buildSystemPrompt(base: string, context: {
   }
 
   if (context.assistantCapabilities.length > 0) {
-    const toolDescriptions = context.assistantCapabilities.map((p) => {
-      return `- ${p.toolKey}: ${p.allowedActions.join(", ")} | Nivel: ${p.executionLevel} | Confirm: ${p.requiresConfirmation ? "Sí" : "No"}`;
-    }).join("\n");
+    const toolDescriptions = context.assistantCapabilities
+      .map((p) => {
+        return `- ${p.toolKey}: ${p.allowedActions.join(", ")} | Nivel: ${p.executionLevel} | Confirm: ${p.requiresConfirmation ? "Sí" : "No"}`;
+      })
+      .join("\n");
     parts.push(
       `\n## HERRAMIENTAS DISPONIBLES (Dinámico por Plan)\n${toolDescriptions}\n\n## REGLAS DE EJECUCIÓN:\n1. READ_ONLY: Solo consultar/explicar. NO ejecutes.\n2. ASSISTED_DRAFT: Prepara borrador, pide confirmación.\n3. FULL_AUTOMATION: Ejecuta automáticamente.\n4. Si requiresConfirmation=true, SIEMPRE pide confirmación.`,
     );
@@ -249,7 +254,9 @@ export async function processSupportMessage(input: {
   // módulo habilitada + capacidad habilitada). Si el plan no define
   // enabledCapabilities, todas las capacidades de los módulos habilitados
   // quedan efectivas (comportamiento actual se mantiene).
-  const effectiveCapabilities = new Set(await getEffectiveCapabilityCodes(tenantPlan));
+  const effectiveCapabilities = new Set(
+    await getEffectiveCapabilityCodes(tenantPlan),
+  );
 
   // Autorización efectiva = feature habilitada (Nivel 1) AND capacidad efectiva
   // (Nivel 1 fino) AND capacidad del asistente permitida para esa acción
@@ -264,7 +271,8 @@ export async function processSupportMessage(input: {
       if (featureKey && !enabledFeatures.has(featureKey)) return null;
 
       const capabilityKey = ASSISTANT_TOOL_CAPABILITY_MAP[toolKey];
-      if (capabilityKey && !effectiveCapabilities.has(capabilityKey)) return null;
+      if (capabilityKey && !effectiveCapabilities.has(capabilityKey))
+        return null;
 
       const requiredAction = TOOL_REQUIRED_ACTION[name] ?? "consult";
       const perm = toolPermissions.find((p) => p.toolKey === toolKey);
@@ -288,13 +296,29 @@ export async function processSupportMessage(input: {
   if (scope.inScope && route.intent === "query") {
     const toolsToRun: string[] = [];
 
-    if (["platform", "tenants", "dashboard", "quotes", "sales", "products", "customers", "channels"].includes(route.module)) {
+    if (
+      [
+        "platform",
+        "tenants",
+        "dashboard",
+        "quotes",
+        "sales",
+        "products",
+        "customers",
+        "channels",
+      ].includes(route.module)
+    ) {
       toolsToRun.push("getTenantSummary");
     }
-    if (["agent", "configuracion", "settings"].includes(route.module) || /agente|config/.test(content)) {
+    if (
+      ["agent", "configuracion", "settings"].includes(route.module) ||
+      /agente|config/.test(content)
+    ) {
       toolsToRun.push("getAgentConfig");
     }
-    if (["platform", "api", "auth", "system", "status"].includes(route.module)) {
+    if (
+      ["platform", "api", "auth", "system", "status"].includes(route.module)
+    ) {
       toolsToRun.push("getSystemStatus");
     }
     if (["quotes", "cotizaciones"].includes(route.module)) {
@@ -312,13 +336,22 @@ export async function processSupportMessage(input: {
     if (["channels", "canales"].includes(route.module)) {
       toolsToRun.push("getChannels");
     }
-    if (["dashboard", "platform", "tenants"].includes(route.module) || /reporte|reportes|resumen|m[eé]tricas|estad[ií]sticas/.test(content)) {
+    if (
+      ["dashboard", "platform", "tenants"].includes(route.module) ||
+      /reporte|reportes|resumen|m[eé]tricas|estad[ií]sticas/.test(content)
+    ) {
       toolsToRun.push("getReports");
     }
-    if (["api"].includes(route.module) || /integraci[oó]n|integraciones|api key|webhook|conectar/.test(content)) {
+    if (
+      ["api"].includes(route.module) ||
+      /integraci[oó]n|integraciones|api key|webhook|conectar/.test(content)
+    ) {
       toolsToRun.push("getIntegrations");
     }
-    if (["settings", "configuracion"].includes(route.module) || /moneda|zona horaria|branding|logo|pol[ií]tica comercial/.test(content)) {
+    if (
+      ["settings", "configuracion"].includes(route.module) ||
+      /moneda|zona horaria|branding|logo|pol[ií]tica comercial/.test(content)
+    ) {
       toolsToRun.push("getSettings");
     }
 
@@ -346,10 +379,13 @@ export async function processSupportMessage(input: {
   const bestCase = caseResults[0] ?? null;
 
   const docResults =
-    scope.inScope &&
-    !bestCase &&
-    route.intent !== "greeting"
-      ? await searchKnowledge(tenantId, content, config.ragMaxDocs, config.ragMinScore)
+    scope.inScope && !bestCase && route.intent !== "greeting"
+      ? await searchKnowledge(
+          tenantId,
+          content,
+          config.ragMaxDocs,
+          config.ragMinScore,
+        )
       : [];
 
   const caseBlock = bestCase
@@ -373,7 +409,10 @@ export async function processSupportMessage(input: {
   const toolBlock =
     toolResults.length > 0
       ? toolResults
-          .map((result) => `Herramienta ${result.name}: ${JSON.stringify(result.data)}`)
+          .map(
+            (result) =>
+              `Herramienta ${result.name}: ${JSON.stringify(result.data)}`,
+          )
           .join("\n")
       : "";
 
@@ -386,12 +425,17 @@ export async function processSupportMessage(input: {
     timeoutMs: config.llm?.timeoutMs,
   });
 
-  const assistantCapabilitiesForPrompt = await getToolPermissionsForPrompt(tenantPlan);
-  const executionLevels = await getAllToolPermissions(tenantPlan).then((perms) =>
-    perms.reduce((acc, p) => {
-      acc[p.toolKey] = p.executionLevel;
-      return acc;
-    }, {} as Record<string, string>),
+  const assistantCapabilitiesForPrompt =
+    await getToolPermissionsForPrompt(tenantPlan);
+  const executionLevels = await getAllToolPermissions(tenantPlan).then(
+    (perms) =>
+      perms.reduce(
+        (acc, p) => {
+          acc[p.toolKey] = p.executionLevel;
+          return acc;
+        },
+        {} as Record<string, string>,
+      ),
   );
 
   const systemPrompt = buildSystemPrompt(config.systemPrompt ?? "", {
@@ -421,7 +465,9 @@ export async function processSupportMessage(input: {
   }> = [
     { role: "system", content: systemPrompt },
     ...recent.map((message) => ({
-      role: (message.role === "USER" ? "user" : "assistant") as "user" | "assistant",
+      role: (message.role === "USER" ? "user" : "assistant") as
+        | "user"
+        | "assistant",
       content: message.content,
     })),
   ];
@@ -469,14 +515,23 @@ export async function processSupportMessage(input: {
         let toolResult: { ok: boolean; message: string; data?: unknown };
 
         if (!tool) {
-          toolResult = { ok: false, message: `Herramienta desconocida: ${toolCall.name}` };
+          toolResult = {
+            ok: false,
+            message: `Herramienta desconocida: ${toolCall.name}`,
+          };
         } else {
           try {
-            toolResult = await tool(tenantId, parseToolArguments(toolCall.arguments));
+            toolResult = await tool(
+              tenantId,
+              parseToolArguments(toolCall.arguments),
+            );
           } catch (error) {
             toolResult = {
               ok: false,
-              message: error instanceof Error ? error.message : "Error ejecutando la herramienta",
+              message:
+                error instanceof Error
+                  ? error.message
+                  : "Error ejecutando la herramienta",
             };
           }
         }
@@ -493,7 +548,7 @@ export async function processSupportMessage(input: {
   } catch (error) {
     console.error("[support-assistant] llm error:", error);
     reply =
-      "No hay un proveedor de inteligencia artificial configurado para el asistente de soporte. Puedes configurarlo desde la pestaña Configuración de esta página.";
+      "No podemos atender tu requerimiento en este momento. Por favor intenta mas tarde";
   }
 
   const guarded = guardResponse({
@@ -556,10 +611,20 @@ export async function getSupportMessages(tenantId: string, userId: string) {
   return { conversationId: conversation._id.toString(), messages };
 }
 
-export async function resetSupportConversation(tenantId: string, userId: string) {
+export async function resetSupportConversation(
+  tenantId: string,
+  userId: string,
+) {
   const conversation = await getOrCreateSupportConversation(tenantId, userId);
-  await SupportMessage.deleteMany({ tenantId, userId, conversationId: conversation._id });
-  await SupportConversation.updateOne({ _id: conversation._id }, { $set: { status: "CLOSED" } });
+  await SupportMessage.deleteMany({
+    tenantId,
+    userId,
+    conversationId: conversation._id,
+  });
+  await SupportConversation.updateOne(
+    { _id: conversation._id },
+    { $set: { status: "CLOSED" } },
+  );
   return { reset: true };
 }
 
