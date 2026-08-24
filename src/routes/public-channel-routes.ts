@@ -18,7 +18,7 @@ import { publicChatReadLimiter } from "../config/rate-limit.js";
 export const publicChannelApiRouter = Router();
 
 publicChannelApiRouter.get(
-  "/channels/:token",
+  "/:token",
   webchatSecurityHeaders({ publicCors: true }),
   publicChatReadLimiter,
   getPublicChannelConfigController,
