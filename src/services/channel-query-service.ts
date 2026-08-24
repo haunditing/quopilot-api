@@ -1,5 +1,6 @@
 import { Types } from "mongoose";
 import { Channel } from "../models/Channel.js";
+import { PublicChannelService } from "./PublicChannelService.js";
 import type {
   ChannelCredentials,
   ChannelStatus,
@@ -17,6 +18,7 @@ export interface ChannelLike {
   type: ChannelType;
   name: string;
   status: ChannelStatus;
+  publicToken?: string;
   config: IChannelConfig;
   credentials: IChannelCredentialsStored;
   createdAt: Date;
@@ -25,6 +27,7 @@ export interface ChannelLike {
 
 export interface PublicChannel {
   id: string;
+  publicToken?: string;
   type: ChannelType;
   name: string;
   status: ChannelStatus;
@@ -70,6 +73,23 @@ export async function getChannelById(
 
   if (!channel) {
     throw new Error("Channel not found");
+  }
+
+  // Backfill perezoso: token público para widgets WebChat creados
+  // antes de la migración (escritura idempotente y acotada).
+  if (
+    channel.type === "WEB_CHAT" &&
+    channel.status === "ACTIVE" &&
+    !channel.publicToken
+  ) {
+    const publicToken = new PublicChannelService().generateWebChatToken();
+
+    await Channel.updateOne(
+      { _id: channel._id },
+      { $set: { publicToken } },
+    );
+
+    channel.publicToken = publicToken;
   }
 
   return channel;
@@ -181,6 +201,7 @@ export async function getActiveChannelByType(
 export function toPublicChannel(channel: ChannelLike): PublicChannel {
   return {
     id: channel._id.toString(),
+    publicToken: channel.publicToken,
     type: channel.type,
     name: channel.name,
     status: channel.status,

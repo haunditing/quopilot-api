@@ -1,4 +1,5 @@
 import mongoose, { ClientSession } from "mongoose";
+import { WebhookDispatcherService } from "./webhook-dispatcher-service.js";
 import { Quote, type IQuote } from "../models/Quote.js";
 import { Sale } from "../models/Sale.js";
 import { getNextSequence } from "./sequence-service.js";
@@ -86,10 +87,22 @@ export async function acceptQuote(tenantId: string, quoteId: string) {
 
       const sale = await createSaleFromQuote(quote, tenantId, session);
 
-      return {
-        quote,
-        sale,
-      };
+      const result = { quote, sale };
+
+      // Notificar al cliente vía webhook (fire-and-forget).
+      const webhookDispatcher = new WebhookDispatcherService();
+      void webhookDispatcher.dispatch(
+        tenantId,
+        "quote.completed",
+        {
+          quoteId: quote._id?.toString(),
+          quoteNumber: quote.number,
+          saleId: sale?._id?.toString(),
+          total: quote.total,
+        },
+      );
+
+      return result;
     });
   } finally {
     await session.endSession();

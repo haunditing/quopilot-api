@@ -46,6 +46,12 @@ export interface IChannel extends Document {
   status: ChannelStatus;
   config: IChannelConfig;
   credentials: IChannelCredentialsStored;
+  /** Token público para resolver el widget WebChat (qp_live_xxx). */
+  publicToken?: string;
+  /** URL de webhook del cliente para notificaciones en tiempo real. */
+  webhookUrl?: string;
+  /** Secreto compartido para firmar payloads HMAC SHA-256. */
+  webhookSecret?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -214,10 +220,31 @@ const channelSchema = new Schema<IChannel>(
       type: channelCredentialsSchema,
       default: () => ({}),
     },
+
+    publicToken: {
+      type: String,
+      trim: true,
+    },
+
+    webhookUrl: {
+      type: String,
+      trim: true,
+      default: undefined,
+    },
+
+    webhookSecret: {
+      type: String,
+      default: undefined,
+    },
   },
   {
     timestamps: true,
   },
+);
+
+channelSchema.index(
+  { publicToken: 1 },
+  { unique: true, sparse: true },
 );
 
 channelSchema.index({

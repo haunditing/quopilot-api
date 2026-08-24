@@ -1,4 +1,5 @@
 import { Types } from "mongoose";
+import { PublicChannelService } from "./PublicChannelService.js";
 import { Channel } from "../models/Channel.js";
 import type {
   ChannelCredentials,
@@ -64,6 +65,21 @@ export async function createChannel(
   const credentials =
     "credentials" in input ? input.credentials : undefined;
 
+  const channelService = new PublicChannelService();
+
+  // Validación de duplicados por tenant (nombre + tipo).
+  const duplicate = await Channel.findOne({
+    tenantId: new Types.ObjectId(tenantId),
+    name: input.name.trim(),
+    type: input.type,
+  })
+    .select("_id")
+    .lean();
+
+  if (duplicate) {
+    throw new Error("Channel already exists");
+  }
+
   const [channel] = await Channel.create([
     {
       tenantId,
@@ -73,6 +89,10 @@ export async function createChannel(
       status: input.status ?? "ACTIVE",
       config: input.config,
       credentials: encryptCredentials(credentials),
+      // Token público para el widget WebChat (qp_live_xxx).
+      ...(input.type === "WEB_CHAT"
+        ? { publicToken: channelService.generateWebChatToken() }
+        : {}),
     },
   ]);
 

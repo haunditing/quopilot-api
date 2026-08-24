@@ -40,7 +40,7 @@ const webChatConfigSchema = z.object({
 export const createChannelSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("WHATSAPP"),
-    name: z.string().trim().min(1),
+    name: z.string().trim().min(1).max(100),
     agentId: z.string().trim().optional(),
     status: channelStatusSchema.optional(),
     config: whatsappConfigSchema,
@@ -48,7 +48,7 @@ export const createChannelSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("INSTAGRAM"),
-    name: z.string().trim().min(1),
+    name: z.string().trim().min(1).max(100),
     agentId: z.string().trim().optional(),
     status: channelStatusSchema.optional(),
     config: instagramConfigSchema,
@@ -56,10 +56,10 @@ export const createChannelSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("WEB_CHAT"),
-    name: z.string().trim().min(1),
+    name: z.string().trim().min(1).max(100),
     agentId: z.string().trim().optional(),
     status: channelStatusSchema.optional(),
-    config: webChatConfigSchema,
+    config: webChatConfigSchema.optional(),
   }),
 ]);
 

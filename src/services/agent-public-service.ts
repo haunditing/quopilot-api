@@ -1,4 +1,5 @@
 import { Types } from "mongoose";
+import { WebhookDispatcherService } from "./webhook-dispatcher-service.js";
 import { Agent } from "../models/Agent.js";
 import { Customer } from "../models/Customer.js";
 import { Message } from "../models/Message.js";
@@ -80,6 +81,7 @@ export async function getPublicChatConfig(tenantId: string) {
 
   const channel = await getActiveChannelByType(tenantId, "WEB_CHAT");
 
+
   return {
     tenantId,
     tenantName: tenant.name,
@@ -111,6 +113,15 @@ export async function startPublicChat(input: StartPublicChatInput) {
   const tenant = await getActivePublicTenant(tenantId);
 
   const channel = await getActiveChannelByType(tenantId, "WEB_CHAT");
+
+  // Notificar al cliente vía webhook (fire-and-forget).
+  const webhookDispatcher = new WebhookDispatcherService();
+  void webhookDispatcher.dispatch(tenantId, "chat.started", {
+    channelId: channel?._id?.toString() ?? "",
+    channelType: "WEB_CHAT",
+    visitorName: name,
+    visitorEmail: email,
+  });
 
   if (!channel) {
     throw new Error("No web chat channel configured");

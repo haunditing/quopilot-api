@@ -32,6 +32,14 @@ function handleChannelError(
     return;
   }
 
+  if (message === "Channel already exists") {
+    res.status(409).json({
+      message: "Ya existe un canal con ese nombre y tipo",
+    });
+
+    return;
+  }
+
   if (
     message === "Invalid tenantId" ||
     message === "Invalid channelId" ||
