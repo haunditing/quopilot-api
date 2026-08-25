@@ -4,8 +4,6 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "node dist/server.js",
-    "healthcheckPath": "/api/public/plans",
-    "healthcheckTimeout": 120
+    "startCommand": "node dist/server.js"
   }
 }
