@@ -12,6 +12,7 @@ import {
 } from "../services/plan-service.js";
 import { createPlanSchema, updatePlanSchema } from "../schemas/plan-schema.js";
 import { getPlanCapabilityMatrix } from "../services/capability-service.js";
+import { notifyLandingRevalidation } from "../services/revalidation.js";
 
 function notFound(res: Response): void {
   res.status(404).json({ message: "Plan not found" });
@@ -69,6 +70,7 @@ export async function createPlanController(
 
   try {
     const plan = await createPlan(result.data);
+    await notifyLandingRevalidation();
     res.status(201).json(plan);
   } catch (error) {
     console.error(error);
@@ -99,6 +101,7 @@ export async function updatePlanController(
 
   try {
     const plan = await updatePlan(id, result.data);
+    await notifyLandingRevalidation();
     res.status(200).json(plan);
   } catch (error) {
     if (error instanceof PlanNotFoundError) {
@@ -124,6 +127,7 @@ export async function deletePlanController(
 
   try {
     const result = await deletePlan(id);
+    await notifyLandingRevalidation();
     if (result.warning) {
       // Soft delete se aplica; se informa la advertencia de dependencias.
       res.status(409).json({
@@ -159,6 +163,7 @@ export async function setDefaultPlanController(
 
   try {
     const plan = await setDefaultPlan(id);
+    await notifyLandingRevalidation();
     res.status(200).json(plan);
   } catch (error) {
     if (error instanceof PlanNotFoundError) {
@@ -210,6 +215,7 @@ export async function updatePlanFeaturesController(
 
   try {
     const plan = await updatePlan(id, { enabledFeatures });
+    await notifyLandingRevalidation();
     res.status(200).json(plan);
   } catch (error) {
     console.error(error);
@@ -259,6 +265,7 @@ export async function updatePlanCapabilitiesController(
 
   try {
     const plan = await updatePlan(id, { enabledCapabilities });
+    await notifyLandingRevalidation();
     res.status(200).json(plan);
   } catch (error) {
     console.error(error);

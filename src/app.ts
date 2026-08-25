@@ -25,6 +25,7 @@ import internalAssistantRoutes from "./routes/internal-assistant-routes.js";
 import supportAssistantRoutes from "./routes/support-assistant-routes.js";
 import superAdminSupportAssistantRoutes from "./routes/super-admin-support-assistant-routes.js";
 import planRoutes from "./routes/plan-routes.js";
+import publicPlanRoutes from "./routes/public-plan-routes.js";
 import { bannerPublicRouter, bannerAdminRouter } from "./routes/banner-routes.js";
 import assistantCapabilitiesRoutes from "./routes/assistant-capabilities-routes.js";
 import catalogRoutes from "./routes/catalog-routes.js";
@@ -100,6 +101,7 @@ app.use("/api/super-admin/assistant-capabilities", assistantCapabilitiesRoutes);
 app.use("/api/super-admin/commercial-policy", commercialPolicyRoutes);
 app.use("/api/admin", catalogRoutes);
 app.use("/api/plans", planRoutes);
+app.use("/api/public/plans", publicPlanRoutes);
 app.use("/api/banners", bannerPublicRouter);
 app.use("/api/admin/banners", bannerAdminRouter);
 
