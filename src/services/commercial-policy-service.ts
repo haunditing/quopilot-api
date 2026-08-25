@@ -33,3 +33,35 @@ export async function updatePlatformCommercialPolicy(input: {
   await policy.save();
   return policy.toObject();
 }
+
+/**
+ * Alias compatibles: el asistente interno y el generador de propuestas
+ * consumen una política de comercial con alcance de tenant. La política real
+ * es de plataforma; se reutiliza la misma (sin filtrar por tenant) para que
+ * el build y el runtime funcionen de forma consistente.
+ */
+export type UpdateCommercialPolicyInput = {
+  trialDays?: number;
+  trialPlanKey?: string;
+  allowedBillingPeriods?: string[];
+  gracePeriodDays?: number;
+  allowImmediateCancellation?: boolean;
+  cancelAtPeriodEndByDefault?: boolean;
+  paymentTerms?: string;
+  discountPolicy?: string;
+  shippingPolicy?: string;
+  warrantyPolicy?: string;
+  returnPolicy?: string;
+  notes?: string;
+};
+
+export async function getCommercialPolicy(_tenantId?: string) {
+  return getPlatformCommercialPolicy();
+}
+
+export async function updateCommercialPolicy(
+  _tenantId: string,
+  input: UpdateCommercialPolicyInput,
+) {
+  return updatePlatformCommercialPolicy(input);
+}
