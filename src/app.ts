@@ -28,6 +28,7 @@ import planRoutes from "./routes/plan-routes.js";
 import publicPlanRoutes from "./routes/public-plan-routes.js";
 import { bannerPublicRouter, bannerAdminRouter } from "./routes/banner-routes.js";
 import { showcasePublicRouter, showcaseAdminRouter } from "./routes/showcase-routes.js";
+import { getChatWidgetController } from "./controllers/chat-widget-controller.js";
 import assistantCapabilitiesRoutes from "./routes/assistant-capabilities-routes.js";
 import catalogRoutes from "./routes/catalog-routes.js";
 import commercialPolicyRoutes from "./routes/commercial-policy-routes.js";
@@ -107,5 +108,6 @@ app.use("/api/banners", bannerPublicRouter);
 app.use("/api/admin/banners", bannerAdminRouter);
 app.use("/api/public/showcase", showcasePublicRouter);
 app.use("/api/admin/showcase", showcaseAdminRouter);
+app.get("/api/public/chat-widget.js", getChatWidgetController);
 
 export default app;
