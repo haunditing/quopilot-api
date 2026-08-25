@@ -1,7 +1,8 @@
 import mongoose, { Document, Schema } from "mongoose";
 
 export interface IBranding extends Document {
-  /** Accesible globalmente: existe un único documento de marca de plataforma. */
+  /** Destino de la marca: app web o landing. */
+  target: "app" | "landing";
   logoUrl?: string;
   faviconUrl?: string;
   assistantImageUrl?: string;
@@ -16,6 +17,13 @@ export interface IBranding extends Document {
 
 const brandingSchema = new Schema<IBranding>(
   {
+    target: {
+      type: String,
+      enum: ["app", "landing"],
+      default: "app",
+      index: true,
+    },
+
     logoUrl: {
       type: String,
     },

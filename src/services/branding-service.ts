@@ -1,6 +1,8 @@
 import { Branding } from "../models/Branding.js";
 import type { UpdateBrandingInput } from "../schemas/branding-schema.js";
 
+export type BrandingTarget = "app" | "landing";
+
 export type PublicBranding = {
   logoUrl?: string | null;
   faviconUrl?: string | null;
@@ -31,21 +33,24 @@ function toPublicBranding(doc: {
   };
 }
 
-export async function getBranding(): Promise<PublicBranding> {
-  const doc = await Branding.findOne().lean();
+/** Marca de un destino concreto (app por defecto para compatibilidad). */
+export async function getBranding(target: BrandingTarget = "app"): Promise<PublicBranding> {
+  const doc = await Branding.findOne({ target }).lean();
 
   if (!doc) {
-    const created = await Branding.create({});
+    const created = await Branding.create({ target });
     return toPublicBranding(created.toObject());
   }
 
   return toPublicBranding(doc);
 }
 
+/** Upsert de la marca de un destino. */
 export async function updateBranding(
+  target: BrandingTarget,
   input: UpdateBrandingInput,
 ): Promise<PublicBranding> {
-  const doc = await Branding.findOneAndUpdate({}, input, {
+  const doc = await Branding.findOneAndUpdate({ target }, input, {
     upsert: true,
     new: true,
     runValidators: true,

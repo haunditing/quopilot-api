@@ -4,22 +4,28 @@ import { updateBrandingSchema } from "../schemas/branding-schema.js";
 import {
   getBranding,
   updateBranding,
+  type BrandingTarget,
 } from "../services/branding-service.js";
 
-/** GET /api/branding — público (la app lo consume en la carga inicial). */
+function resolveTarget(value: unknown, fallback: BrandingTarget = "app"): BrandingTarget {
+  return value === "landing" ? "landing" : fallback;
+}
+
+/** GET /api/branding?target=app|landing — público. */
 export async function getBrandingController(
-  _req: AuthenticatedRequest,
+  req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
   try {
-    const branding = await getBranding();
-    res.status(200).json(branding);
+    const target = resolveTarget(req.query.target);
+    const branding = await getBranding(target);
+    res.status(200).json({ ...branding, target });
   } catch (error) {
     handleBrandingError(res, error, "Unable to load branding");
   }
 }
 
-/** PUT /api/branding — solo SUPER_ADMIN. */
+/** PUT /api/branding — solo SUPER_ADMIN. Body puede incluir `target`. */
 export async function updateBrandingController(
   req: AuthenticatedRequest,
   res: Response,
@@ -35,8 +41,9 @@ export async function updateBrandingController(
   }
 
   try {
-    const branding = await updateBranding(result.data);
-    res.status(200).json(branding);
+    const target = resolveTarget(result.data.target, "app") === "landing" ? "landing" : "app";
+    const branding = await updateBranding(target, result.data);
+    res.status(200).json({ ...branding, target });
   } catch (error) {
     handleBrandingError(res, error, "Unable to update branding");
   }
@@ -47,7 +54,6 @@ function handleBrandingError(
   error: unknown,
   fallbackMessage: string,
 ): void {
-  const message = error instanceof Error ? error.message : fallbackMessage;
   console.error("[Branding] Error:", error);
   res.status(500).json({ message: fallbackMessage });
 }

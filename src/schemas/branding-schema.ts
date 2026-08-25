@@ -26,6 +26,7 @@ const imageReference = z
   .nullable();
 
 export const updateBrandingSchema = z.object({
+  target: z.enum(["app", "landing"]).optional(),
   logoUrl: imageReference,
   faviconUrl: imageReference,
   assistantImageUrl: imageReference,
