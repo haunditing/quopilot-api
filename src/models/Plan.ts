@@ -15,6 +15,7 @@ export interface IPlan extends Document {
   enabledCapabilities: string[];
   usageLimits: IPlanUsageLimitEntry[];
   sortOrder: number;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,6 +76,12 @@ const planSchema = new Schema(
     sortOrder: {
       type: Number,
       default: 0,
+    },
+
+    deletedAt: {
+      type: Date,
+      default: null,
+      index: true,
     },
   },
   {

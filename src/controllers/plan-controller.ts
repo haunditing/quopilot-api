@@ -1,9 +1,10 @@
 import type { Response } from "express";
 import type { AuthenticatedRequest } from "../middleware/auth-middleware.js";
 import {
+  PlanNotFoundError,
   createPlan,
   deletePlan,
-  getPlanByKey,
+  getPlanByIdentifier,
   getPlanEnabledFeatures,
   listPlans,
   setDefaultPlan,
@@ -12,12 +13,17 @@ import {
 import { createPlanSchema, updatePlanSchema } from "../schemas/plan-schema.js";
 import { getPlanCapabilityMatrix } from "../services/capability-service.js";
 
+function notFound(res: Response): void {
+  res.status(404).json({ message: "Plan not found" });
+}
+
 export async function listPlansController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
   try {
-    const plans = await listPlans();
+    const includeArchived = req.query.includeArchived === "true";
+    const plans = await listPlans({ includeArchived });
     res.status(200).json(plans);
   } catch (error) {
     console.error(error);
@@ -29,16 +35,16 @@ export async function getPlanController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
-  const key = req.params.key;
-  if (!key || typeof key !== "string") {
-    res.status(400).json({ message: "Plan key required" });
+  const id = req.params.id;
+  if (!id || typeof id !== "string") {
+    res.status(400).json({ message: "Plan id or key required" });
     return;
   }
 
   try {
-    const plan = await getPlanByKey(key);
+    const plan = await getPlanByIdentifier(id);
     if (!plan) {
-      res.status(404).json({ message: "Plan not found" });
+      notFound(res);
       return;
     }
     res.status(200).json(plan);
@@ -76,9 +82,9 @@ export async function updatePlanController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
-  const key = req.params.key;
-  if (!key || typeof key !== "string") {
-    res.status(400).json({ message: "Plan key required" });
+  const id = req.params.id;
+  if (!id || typeof id !== "string") {
+    res.status(400).json({ message: "Plan id or key required" });
     return;
   }
 
@@ -92,9 +98,13 @@ export async function updatePlanController(
   }
 
   try {
-    const plan = await updatePlan(key, result.data);
+    const plan = await updatePlan(id, result.data);
     res.status(200).json(plan);
   } catch (error) {
+    if (error instanceof PlanNotFoundError) {
+      notFound(res);
+      return;
+    }
     console.error(error);
     res.status(500).json({
       message: error instanceof Error ? error.message : "Unable to update plan",
@@ -106,16 +116,30 @@ export async function deletePlanController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
-  const key = req.params.key;
-  if (!key || typeof key !== "string") {
-    res.status(400).json({ message: "Plan key required" });
+  const id = req.params.id;
+  if (!id || typeof id !== "string") {
+    res.status(400).json({ message: "Plan id or key required" });
     return;
   }
 
   try {
-    const result = await deletePlan(key);
-    res.status(200).json(result);
+    const result = await deletePlan(id);
+    if (result.warning) {
+      // Soft delete se aplica; se informa la advertencia de dependencias.
+      res.status(409).json({
+        message: result.warning.message,
+        code: result.warning.code,
+        activeTenants: result.warning.activeTenants,
+        archived: true,
+      });
+      return;
+    }
+    res.status(200).json({ archived: true });
   } catch (error) {
+    if (error instanceof PlanNotFoundError) {
+      notFound(res);
+      return;
+    }
     console.error(error);
     res.status(500).json({
       message: error instanceof Error ? error.message : "Unable to delete plan",
@@ -127,16 +151,20 @@ export async function setDefaultPlanController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
-  const key = req.params.key;
-  if (!key || typeof key !== "string") {
-    res.status(400).json({ message: "Plan key required" });
+  const id = req.params.id;
+  if (!id || typeof id !== "string") {
+    res.status(400).json({ message: "Plan id or key required" });
     return;
   }
 
   try {
-    const plan = await setDefaultPlan(key);
+    const plan = await setDefaultPlan(id);
     res.status(200).json(plan);
   } catch (error) {
+    if (error instanceof PlanNotFoundError) {
+      notFound(res);
+      return;
+    }
     console.error(error);
     res.status(500).json({
       message: error instanceof Error ? error.message : "Unable to set default plan",
@@ -148,14 +176,14 @@ export async function getPlanFeaturesController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
-  const key = req.params.key;
-  if (!key || typeof key !== "string") {
-    res.status(400).json({ message: "Plan key required" });
+  const id = req.params.id;
+  if (!id || typeof id !== "string") {
+    res.status(400).json({ message: "Plan id or key required" });
     return;
   }
 
   try {
-    const features = await getPlanEnabledFeatures(key);
+    const features = await getPlanEnabledFeatures(id);
     res.status(200).json(features);
   } catch (error) {
     console.error(error);
@@ -167,9 +195,9 @@ export async function updatePlanFeaturesController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
-  const key = req.params.key;
-  if (!key || typeof key !== "string") {
-    res.status(400).json({ message: "Plan key required" });
+  const id = req.params.id;
+  if (!id || typeof id !== "string") {
+    res.status(400).json({ message: "Plan id or key required" });
     return;
   }
 
@@ -181,9 +209,7 @@ export async function updatePlanFeaturesController(
   }
 
   try {
-    const plan = await (await import("../services/plan-service.js")).updatePlan(key, {
-      enabledFeatures,
-    });
+    const plan = await updatePlan(id, { enabledFeatures });
     res.status(200).json(plan);
   } catch (error) {
     console.error(error);
@@ -197,14 +223,14 @@ export async function getPlanCapabilitiesController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
-  const key = req.params.key;
-  if (!key || typeof key !== "string") {
-    res.status(400).json({ message: "Plan key required" });
+  const id = req.params.id;
+  if (!id || typeof id !== "string") {
+    res.status(400).json({ message: "Plan id or key required" });
     return;
   }
 
   try {
-    const matrix = await getPlanCapabilityMatrix(key);
+    const matrix = await getPlanCapabilityMatrix(id);
     res.status(200).json(matrix);
   } catch (error) {
     console.error(error);
@@ -218,9 +244,9 @@ export async function updatePlanCapabilitiesController(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
-  const key = req.params.key;
-  if (!key || typeof key !== "string") {
-    res.status(400).json({ message: "Plan key required" });
+  const id = req.params.id;
+  if (!id || typeof id !== "string") {
+    res.status(400).json({ message: "Plan id or key required" });
     return;
   }
 
@@ -232,9 +258,7 @@ export async function updatePlanCapabilitiesController(
   }
 
   try {
-    const plan = await (await import("../services/plan-service.js")).updatePlan(key, {
-      enabledCapabilities,
-    });
+    const plan = await updatePlan(id, { enabledCapabilities });
     res.status(200).json(plan);
   } catch (error) {
     console.error(error);

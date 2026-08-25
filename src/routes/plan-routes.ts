@@ -22,13 +22,14 @@ router.use(authenticate, authorize("SUPER_ADMIN"));
 
 router.get("/", listPlansController);
 router.post("/", createPlanController);
-router.get("/:key", getPlanController);
-router.put("/:key", updatePlanController);
-router.delete("/:key", deletePlanController);
-router.post("/:key/default", setDefaultPlanController);
-router.get("/:key/features", getPlanFeaturesController);
-router.put("/:key/features", updatePlanFeaturesController);
-router.get("/:key/capabilities", getPlanCapabilitiesController);
-router.put("/:key/capabilities", updatePlanCapabilitiesController);
+router.get("/:id", getPlanController);
+router.put("/:id", updatePlanController);
+router.patch("/:id", updatePlanController);
+router.delete("/:id", deletePlanController);
+router.post("/:id/default", setDefaultPlanController);
+router.get("/:id/features", getPlanFeaturesController);
+router.put("/:id/features", updatePlanFeaturesController);
+router.get("/:id/capabilities", getPlanCapabilitiesController);
+router.put("/:id/capabilities", updatePlanCapabilitiesController);
 
 export default router;

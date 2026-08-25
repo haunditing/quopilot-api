@@ -158,7 +158,10 @@ export function computeCatalogEffectiveness(
 }
 
 export async function getPlanCapabilityMatrix(planKey: string): Promise<PlanCapabilityMatrix> {
-  const plan = await Plan.findOne({ key: planKey.toUpperCase() }).lean();
+  const plan = await Plan.findOne({
+    key: planKey.toUpperCase(),
+    deletedAt: null,
+  }).lean();
   if (!plan) {
     throw new Error("Plan not found");
   }
@@ -198,7 +201,10 @@ export async function hasTenantCapability(tenant: { plan: string }, capabilityCo
  */
 export async function hasTenantFeature(tenant: { plan: string }, featureKey: string): Promise<boolean> {
   if (!tenant.plan) return false;
-  const plan = await Plan.findOne({ key: tenant.plan.toUpperCase() }).lean();
+  const plan = await Plan.findOne({
+    key: tenant.plan.toUpperCase(),
+    deletedAt: null,
+  }).lean();
   if (!plan) return false;
   return plan.enabledFeatures.includes(featureKey);
 }

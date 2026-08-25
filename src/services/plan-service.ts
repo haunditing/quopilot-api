@@ -1,25 +1,78 @@
+import { Types } from "mongoose";
 import { Plan } from "../models/Plan.js";
+import { Tenant } from "../models/Tenant.js";
 import { AppFeature } from "../models/AppFeature.js";
 import { AppCapability } from "../models/AppCapability.js";
 import {
   DEFAULT_APP_FEATURES_BY_PLAN,
   DEFAULT_APP_CAPABILITIES_BY_PLAN,
 } from "../registry/app-feature-registry.js";
+import type { UpdatePlanInput } from "../schemas/plan-schema.js";
 
-export async function listPlans() {
-  return Plan.find().sort({ sortOrder: 1, createdAt: 1 }).lean();
+export class PlanNotFoundError extends Error {
+  constructor(message = "Plan not found") {
+    super(message);
+    this.name = "PlanNotFoundError";
+  }
+}
+
+type PlanIdentifier = string;
+
+/** Filtro común para archivar: por defecto se excluyen los archivados. */
+function archivedFilter(includeArchived: boolean): Record<string, unknown> {
+  return includeArchived ? {} : { deletedAt: null };
+}
+
+/**
+ * Resuelve un identificador de plan que puede ser un `_id` de Mongo o un
+ * `key` (código). Permite que la API acepte `/plans/:id` y `/plans/:key`.
+ */
+function planFilter(
+  identifier: string,
+  includeArchived = false,
+): Record<string, unknown> {
+  const archived = archivedFilter(includeArchived);
+  if (Types.ObjectId.isValid(identifier)) {
+    return { ...archived, _id: new Types.ObjectId(identifier) };
+  }
+  return { ...archived, key: identifier.toUpperCase() };
+}
+
+/** Lista planes excluyendo los archivados (a menos que se pida incluirlos). */
+export async function listPlans(
+  options: { includeArchived?: boolean } = {},
+) {
+  const filter = archivedFilter(options.includeArchived ?? false);
+  return Plan.find(filter)
+    .sort({ sortOrder: 1, createdAt: 1 })
+    .lean();
 }
 
 export async function listActivePlans() {
-  return Plan.find({ isActive: true }).sort({ sortOrder: 1, createdAt: 1 }).lean();
+  return Plan.find({ deletedAt: null, isActive: true })
+    .sort({ sortOrder: 1, createdAt: 1 })
+    .lean();
 }
 
-export async function getPlanByKey(key: string) {
-  return Plan.findOne({ key: key.toUpperCase() }).lean();
+export async function getPlanByKey(
+  key: string,
+  options: { includeArchived?: boolean } = {},
+) {
+  return Plan.findOne({
+    ...archivedFilter(options.includeArchived ?? false),
+    key: key.toUpperCase(),
+  }).lean();
+}
+
+export async function getPlanByIdentifier(
+  identifier: string,
+  options: { includeArchived?: boolean } = {},
+) {
+  return Plan.findOne(planFilter(identifier, options.includeArchived ?? false)).lean();
 }
 
 export async function getDefaultPlan() {
-  return Plan.findOne({ isDefault: true, isActive: true }).lean();
+  return Plan.findOne({ isDefault: true, isActive: true, deletedAt: null }).lean();
 }
 
 export async function getPlanEnabledFeatures(key: string): Promise<string[]> {
@@ -32,13 +85,19 @@ export async function getPlanEnabledCapabilities(key: string): Promise<string[]>
   return plan?.enabledCapabilities ?? [];
 }
 
-export async function isFeatureEnabled(planKey: string, featureKey: string): Promise<boolean> {
+export async function isFeatureEnabled(
+  planKey: string,
+  featureKey: string,
+): Promise<boolean> {
   const plan = await getPlanByKey(planKey);
   if (!plan) return false;
   return plan.enabledFeatures.includes(featureKey);
 }
 
-export async function getFeatureConfig(planKey: string, featureKey: string): Promise<Record<string, unknown> | null> {
+export async function getFeatureConfig(
+  planKey: string,
+  featureKey: string,
+): Promise<Record<string, unknown> | null> {
   const plan = await getPlanByKey(planKey);
   if (!plan) return null;
   if (!plan.enabledFeatures.includes(featureKey)) return null;
@@ -54,6 +113,7 @@ export async function createPlan(input: {
   isDefault?: boolean;
   enabledFeatures?: string[];
   enabledCapabilities?: string[];
+  usageLimits?: { code: string; limit: number }[];
   sortOrder?: number;
 }) {
   const key = input.key.toUpperCase();
@@ -62,16 +122,12 @@ export async function createPlan(input: {
     await Plan.updateMany({ isDefault: true }, { $set: { isDefault: false } });
   }
 
-  // Baseline explícito si no se proveen listas
   const featuresToValidate =
     input.enabledFeatures ?? DEFAULT_APP_FEATURES_BY_PLAN[key] ?? [];
   const capabilitiesToValidate =
     input.enabledCapabilities ?? DEFAULT_APP_CAPABILITIES_BY_PLAN[key] ?? [];
 
-  // Validate features exist in AppFeature
   const validFeatures = await validateFeatures(featuresToValidate);
-
-  // Validate capabilities exist in AppCapability
   const validCapabilities = await validateCapabilities(capabilitiesToValidate);
 
   const plan = await Plan.create({
@@ -82,71 +138,117 @@ export async function createPlan(input: {
     isDefault: input.isDefault ?? false,
     enabledFeatures: validFeatures,
     enabledCapabilities: validCapabilities,
+    usageLimits: input.usageLimits ?? [],
     sortOrder: input.sortOrder ?? 0,
+    deletedAt: null,
   });
 
   return plan.toObject();
 }
 
-export async function updatePlan(key: string, input: {
-  name?: string;
-  description?: string;
-  isActive?: boolean;
-  isDefault?: boolean;
-  enabledFeatures?: string[];
-  enabledCapabilities?: string[];
-  sortOrder?: number;
-}) {
+/**
+ * Actualiza un plan por `_id` o `key`.
+ * El campo `code`/`key` es INMUTABLE tras la creación: cualquier valor
+ * enviado se descarta (se ignora) y no forma parte del `$set`.
+ */
+export async function updatePlan(identifier: string, input: UpdatePlanInput) {
+  // Descarta campos inmutables o de metadatos.
+  const clean = { ...input };
+  delete (clean as Record<string, unknown>).key;
+  delete (clean as Record<string, unknown>).code;
+  delete (clean as Record<string, unknown>)._id;
+  delete (clean as Record<string, unknown>).id;
+  delete (clean as Record<string, unknown>).createdAt;
+  delete (clean as Record<string, unknown>).updatedAt;
+  delete (clean as Record<string, unknown>).deletedAt;
+
   if (input.isDefault) {
     await Plan.updateMany({ isDefault: true }, { $set: { isDefault: false } });
   }
 
-  // Validate features if provided
-  let validFeatures: string[] | undefined;
-  if (input.enabledFeatures) {
-    validFeatures = await validateFeatures(input.enabledFeatures);
-    input = { ...input, enabledFeatures: validFeatures };
+  // Validar features si se proveen
+  if (clean.enabledFeatures) {
+    clean.enabledFeatures = await validateFeatures(clean.enabledFeatures);
   }
 
-  // Validate capabilities if provided
-  if (input.enabledCapabilities) {
-    const validCapabilities = await validateCapabilities(input.enabledCapabilities);
-    input = { ...input, enabledCapabilities: validCapabilities };
+  // Validar capabilities si se proveen
+  if (clean.enabledCapabilities) {
+    clean.enabledCapabilities = await validateCapabilities(clean.enabledCapabilities);
   }
 
   const plan = await Plan.findOneAndUpdate(
-    { key: key.toUpperCase() },
-    { $set: input },
+    planFilter(identifier),
+    { $set: clean },
     { returnDocument: "after", runValidators: true },
   ).lean();
 
   if (!plan) {
-    throw new Error("Plan not found");
+    throw new PlanNotFoundError();
   }
 
   return plan;
 }
 
-export async function deletePlan(key: string) {
-  const plan = await Plan.findOneAndDelete({ key: key.toUpperCase() }).lean();
-
-  if (!plan) {
-    throw new Error("Plan not found");
-  }
-
-  return { id: key };
+export interface DeletePlanResult {
+  archived: boolean;
+  warning?: {
+    message: string;
+    code: string;
+    activeTenants: number;
+  };
 }
 
-export async function setDefaultPlan(key: string) {
+/**
+ * Eliminación lógica (Soft Delete): marca `deletedAt` y `isActive=false`.
+ * Si el plan tiene tenants activos, se archiva igualmente pero se devuelve
+ * una advertencia para que la UI informe que seguirá disponible para esos
+ * usuarios.
+ */
+export async function deletePlan(identifier: string): Promise<DeletePlanResult> {
+  const plan = await Plan.findOne(planFilter(identifier)).lean();
+
+  if (!plan) {
+    throw new PlanNotFoundError();
+  }
+
+  let activeTenants = 0;
+  try {
+    activeTenants = await Tenant.countDocuments({
+      plan: plan.key,
+      status: "ACTIVE",
+    });
+  } catch {
+    // Si la colección de tenants no responde, se archiva sin advertencia.
+  }
+
+  const now = new Date();
+  await Plan.updateOne(
+    { _id: plan._id },
+    { $set: { deletedAt: now, isActive: false } },
+  );
+
+  const warning =
+    activeTenants > 0
+      ? {
+          message: `Este plan tiene ${activeTenants} tenant(s) activo(s). Se archivará pero seguirá disponible para los usuarios actuales.`,
+          code: "PLAN_HAS_ACTIVE_TENANTS",
+          activeTenants,
+        }
+      : undefined;
+
+  return { archived: true, warning };
+}
+
+export async function setDefaultPlan(identifier: string) {
   await Plan.updateMany({ isDefault: true }, { $set: { isDefault: false } });
   const plan = await Plan.findOneAndUpdate(
-    { key: key.toUpperCase() },
+    planFilter(identifier),
     { $set: { isDefault: true } },
     { returnDocument: "after" },
   ).lean();
 
   if (!plan) {
-    throw new Error("Plan not found");
+    throw new PlanNotFoundError();
   }
 
   return plan;
@@ -166,8 +268,6 @@ async function validateCapabilities(capabilityCodes: string[]): Promise<string[]
 
   const capabilityMap = new Map(capabilities.map((c) => [c.code, c]));
 
-  // 1. Filtrar solo las que existen y son configurables por plan
-  // (Las no-configurables no se guardan en el plan porque siempre son efectivas)
   const validConfigurableCodes = capabilityCodes.filter((code) => {
     const cap = capabilityMap.get(code);
     return cap && cap.configurableByPlan;
@@ -176,13 +276,11 @@ async function validateCapabilities(capabilityCodes: string[]): Promise<string[]
   const uniqueCodes = [...new Set(validConfigurableCodes)];
   const codesSet = new Set(uniqueCodes);
 
-  // 2. Validar dependencias OBLIGATORIAS
   for (const code of uniqueCodes) {
     const cap = capabilityMap.get(code);
     if (cap && cap.dependencies) {
       for (const dep of cap.dependencies) {
         if (dep.type === "OBLIGATORIA" && !codesSet.has(dep.code)) {
-          // Verificar si la dependencia es no-configurable (siempre efectiva)
           const depCap = await AppCapability.findOne({ code: dep.code }).lean();
           if (!depCap || depCap.configurableByPlan) {
             throw new Error(
