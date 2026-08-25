@@ -101,4 +101,28 @@ registerCapabilities([
     kind: "EDICION",
     dependencies: [],
   },
+  {
+    module: "superAdmin",
+    code: "superAdmin.branding.view",
+    domain: "SUPER_ADMIN",
+    allowedRoles: ROLES_SUPER_ADMIN,
+    includedInPlans: ALL_PLANS,
+    name: "Ver branding de plataforma",
+    description: "Consultar la identidad de marca global de la plataforma.",
+    kind: "VISUALIZACION",
+    dependencies: [],
+  },
+  {
+    module: "superAdmin",
+    code: "superAdmin.branding.manage",
+    domain: "SUPER_ADMIN",
+    allowedRoles: ROLES_SUPER_ADMIN,
+    includedInPlans: ALL_PLANS,
+    name: "Administrar branding de plataforma",
+    description: "Editar logotipo, favicon, colores, nombre y tipografía de la marca global.",
+    kind: "EDICION",
+    dependencies: [
+      { code: "superAdmin.branding.view", type: "OBLIGATORIA" },
+    ],
+  },
 ]);

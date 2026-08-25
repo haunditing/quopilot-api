@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import path from "node:path";
 import type { Request } from "express";
 import authRoutes from "./routes/auth-routes";
 import superAdminDashboardRoutes from "./routes/super-admin-dashboard-routes.js";
@@ -34,6 +35,7 @@ import {
   publicChannelPageRouter,
 } from "./routes/public-channel-routes.js";
 import { getCapabilitiesReport } from "./capabilities/index.js";
+import brandingRoutes from "./routes/branding-routes.js";
 
 type RawBodyRequest = Request & {
   rawBody?: Buffer;
@@ -43,8 +45,12 @@ const app = express();
 
 app.use(cors());
 
+// Archivos subidos (logo/favicon) servidos públicamente.
+app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
+
 app.use(
   express.json({
+    limit: "5mb",
     verify: (req, _res, buf) => {
       (req as RawBodyRequest).rawBody = buf;
     },
@@ -73,6 +79,7 @@ app.use("/api/v1/public/channels", publicChannelApiRouter);
 app.use("/", publicChannelPageRouter);
 
 app.use("/api/auth", authRoutes);
+app.use("/api/branding", brandingRoutes);
 app.use("/api/quotes", quoteRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/customers", customerRoutes);
