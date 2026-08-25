@@ -4,6 +4,7 @@ export interface IBranding extends Document {
   /** Accesible globalmente: existe un único documento de marca de plataforma. */
   logoUrl?: string;
   faviconUrl?: string;
+  assistantImageUrl?: string;
   primaryColor?: string;
   secondaryColor?: string;
   brandName?: string;
@@ -17,12 +18,14 @@ const brandingSchema = new Schema<IBranding>(
   {
     logoUrl: {
       type: String,
-      trim: true,
     },
 
     faviconUrl: {
       type: String,
-      trim: true,
+    },
+
+    assistantImageUrl: {
+      type: String,
     },
 
     primaryColor: {

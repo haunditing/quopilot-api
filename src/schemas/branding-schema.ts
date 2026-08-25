@@ -5,23 +5,34 @@ const hexColor = z
   .trim()
   .regex(/^#[0-9a-fA-F]{6}$/, "must be a valid hex color (#RRGGBB)");
 
-const optionalString = z.string().trim().max(500).optional().nullable();
 const optionalColor = hexColor.optional().nullable();
 
+/**
+ * Referencia de imagen: una data URI embebida (se guarda en la DB) o una URL
+ * http(s) pública.
+ */
+const imageReference = z
+  .string()
+  .trim()
+  .max(4_000_000)
+  .refine(
+    (value) =>
+      value.length === 0 ||
+      /^data:image\/[a-z0-9.+-]+;base64,/i.test(value) ||
+      /^https?:\/\//i.test(value),
+    "must be a valid image data URI or URL",
+  )
+  .optional()
+  .nullable();
+
 export const updateBrandingSchema = z.object({
-  logoUrl: optionalString,
-  faviconUrl: optionalString,
+  logoUrl: imageReference,
+  faviconUrl: imageReference,
+  assistantImageUrl: imageReference,
   primaryColor: optionalColor,
   secondaryColor: optionalColor,
   brandName: z.string().trim().max(80).optional().nullable(),
   fontFamily: z.string().trim().max(120).optional().nullable(),
 });
 
-export const uploadImageSchema = z.object({
-  filename: z.string().trim().min(1).max(120),
-  mime: z.enum(["image/png", "image/jpeg", "image/webp", "image/svg+xml", "image/gif"]),
-  data: z.string().min(1).regex(/^[A-Za-z0-9+/=\s]+$/, "invalid base64 data"),
-});
-
 export type UpdateBrandingInput = z.infer<typeof updateBrandingSchema>;
-export type UploadImageInput = z.infer<typeof uploadImageSchema>;

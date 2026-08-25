@@ -1,6 +1,5 @@
 import express from "express";
 import cors from "cors";
-import path from "node:path";
 import type { Request } from "express";
 import authRoutes from "./routes/auth-routes";
 import superAdminDashboardRoutes from "./routes/super-admin-dashboard-routes.js";
@@ -44,9 +43,6 @@ type RawBodyRequest = Request & {
 const app = express();
 
 app.use(cors());
-
-// Archivos subidos (logo/favicon) servidos públicamente.
-app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 
 app.use(
   express.json({

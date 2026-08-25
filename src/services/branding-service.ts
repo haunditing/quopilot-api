@@ -4,6 +4,7 @@ import type { UpdateBrandingInput } from "../schemas/branding-schema.js";
 export type PublicBranding = {
   logoUrl?: string | null;
   faviconUrl?: string | null;
+  assistantImageUrl?: string | null;
   primaryColor?: string | null;
   secondaryColor?: string | null;
   brandName?: string | null;
@@ -13,6 +14,7 @@ export type PublicBranding = {
 function toPublicBranding(doc: {
   logoUrl?: string;
   faviconUrl?: string;
+  assistantImageUrl?: string;
   primaryColor?: string;
   secondaryColor?: string;
   brandName?: string;
@@ -21,6 +23,7 @@ function toPublicBranding(doc: {
   return {
     logoUrl: doc.logoUrl ?? null,
     faviconUrl: doc.faviconUrl ?? null,
+    assistantImageUrl: doc.assistantImageUrl ?? null,
     primaryColor: doc.primaryColor ?? null,
     secondaryColor: doc.secondaryColor ?? null,
     brandName: doc.brandName ?? null,
