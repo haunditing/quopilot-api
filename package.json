@@ -11,6 +11,7 @@
     "seed:plans": "tsx scripts/seed-plans.ts",
     "seed:banners": "tsx scripts/seed-banners.ts",
     "seed:showcase": "tsx scripts/seed-showcase.ts",
+    "provision:company": "tsx scripts/register-company.ts",
     "seed:demo": "tsx scripts/seed-demo-tenant.ts",
     "seed:data": "tsx scripts/seed-demo-data.ts",
     "seed:commercial": "tsx scripts/seed-commercial-demo.ts",
