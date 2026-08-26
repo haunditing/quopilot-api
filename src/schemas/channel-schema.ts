@@ -30,6 +30,8 @@ const webChatConfigSchema = z.object({
   widget: z
     .object({
       title: z.string().trim().optional(),
+      agentName: z.string().trim().min(1).max(100).optional(),
+      companyName: z.string().trim().min(1).max(100).optional(),
       greetingMessage: z.string().trim().optional(),
       primaryColor: z.string().trim().optional(),
       position: z.enum(["bottom-right", "bottom-left"]).optional(),
@@ -73,6 +75,8 @@ export const updateChannelConfigSchema = z.object({
   widget: z
     .object({
       title: z.string().trim().optional(),
+      agentName: z.string().trim().min(1).max(100).optional(),
+      companyName: z.string().trim().min(1).max(100).optional(),
       greetingMessage: z.string().trim().optional(),
       primaryColor: z.string().trim().optional(),
       position: z.enum(["bottom-right", "bottom-left"]).optional(),

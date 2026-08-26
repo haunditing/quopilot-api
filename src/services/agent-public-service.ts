@@ -81,12 +81,74 @@ export async function getPublicChatConfig(tenantId: string) {
 
   const channel = await getActiveChannelByType(tenantId, "WEB_CHAT");
 
+  // Resolución dinámica del nombre del agente: widget.agentName → Agent.name → fallback
+  let agentName: string | undefined;
+  let companyName: string | undefined;
+
+  if (channel) {
+    const rawWidget = getChannelWidgetConfig(channel);
+    agentName = rawWidget?.agentName?.trim() || undefined;
+    companyName = rawWidget?.companyName?.trim() || undefined;
+
+    // Si el widget no trae agentName, buscar el agente vinculado al canal o el activo del tenant
+    if (!agentName) {
+      try {
+        let doc: { name?: string } | null = null;
+        if (channel.agentId) {
+          const found = await Agent.findOne({
+            _id: channel.agentId,
+            tenantId: new Types.ObjectId(tenantId),
+          }).lean();
+          if (found?.name) doc = { name: found.name };
+        }
+        if (!doc) {
+          const active = await Agent.findOne({
+            tenantId: new Types.ObjectId(tenantId),
+            status: "ACTIVE",
+          }).lean();
+          if (active?.name) doc = { name: active.name };
+        }
+        if (doc?.name?.trim()) agentName = doc.name.trim();
+      } catch {
+        // silencioso: deja agentName sin resolver
+      }
+    }
+
+    // Enriquecer widget con valores resueltos para el frontend
+    const widget = rawWidget
+      ? {
+          ...rawWidget,
+          agentName: agentName ?? rawWidget.agentName,
+          companyName: companyName ?? tenant.name,
+        }
+      : undefined;
+
+    return {
+      tenantId,
+      tenantName: tenant.name,
+      channelName: channel.name,
+      agentName,
+      widget,
+    };
+  }
+
+  // Sin canal: intenta resolver solo por agente activo
+  try {
+    const agentDoc = await Agent.findOne({
+      tenantId: new Types.ObjectId(tenantId),
+      status: "ACTIVE",
+    }).lean();
+    if (agentDoc?.name?.trim()) agentName = agentDoc.name.trim();
+  } catch {
+    // silencioso
+  }
 
   return {
     tenantId,
     tenantName: tenant.name,
-    channelName: channel?.name,
-    widget: channel ? getChannelWidgetConfig(channel) : undefined,
+    channelName: undefined,
+    agentName,
+    widget: undefined,
   };
 }
 
