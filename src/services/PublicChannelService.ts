@@ -196,6 +196,22 @@ export class PublicChannelService {
     return `<script src="${cdn}/v1/widget.js" data-quopilot-token="${token}" async></script>`;
   }
 
+  /**
+   * Resuelve el token público del canal activo por tenantId (para uso del widget de landing).
+   * Retorna null si no hay canal WEB_CHAT activo.
+   */
+  async getPublicTokenByTenant(tenantId: string): Promise<string | null> {
+    const channel = await Channel.findOne({
+      tenantId,
+      type: "WEB_CHAT",
+      status: "ACTIVE",
+    })
+      .select("publicToken")
+      .lean();
+
+    return channel?.publicToken ?? null;
+  }
+
   /** Convierte una resolución completa en metadatos OpenGraph. */
   buildOpenGraphMetadata(
     resolution: ChannelResolution,

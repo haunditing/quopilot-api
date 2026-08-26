@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Request, Response } from "express";
+import { Types } from "mongoose";
 import { publicChannelService } from "../services/PublicChannelService.js";
 import { isPublicChannelToken } from "../dto/public-channel.dto.js";
 
@@ -170,5 +171,36 @@ try { history.replaceState({}, "", ${JSON.stringify(spaRoute)}); } catch (_) {}
   } catch (error) {
     console.error("[PublicChannel] Error rendering page:", error);
     res.status(500).type("text").send("Internal error");
+  }
+}
+
+/**
+ * GET /api/v1/public/channels/by-tenant/:tenantId
+ * Resuelve el token público del canal WEB_CHAT activo por tenant.
+ * Público (para que la landing use el mismo widget que los tenants).
+ */
+export async function getPublicTokenByTenantController(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const tenantId = String(req.params.tenantId ?? "");
+
+  if (!Types.ObjectId.isValid(tenantId)) {
+    res.status(400).json({ message: "Invalid tenantId" });
+    return;
+  }
+
+  try {
+    const token = await publicChannelService.getPublicTokenByTenant(tenantId);
+
+    if (!token) {
+      res.status(404).json({ message: "No web chat channel configured" });
+      return;
+    }
+
+    res.status(200).json({ token });
+  } catch (error) {
+    console.error("[PublicChannel] Error resolving token by tenant:", error);
+    res.status(500).json({ message: "Unable to load channel token" });
   }
 }

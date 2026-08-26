@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getPublicChannelConfigController,
   getPublicChannelPageController,
+  getPublicTokenByTenantController,
 } from "../controllers/PublicChannelController.js";
 import {
   webchatSsrSecurityHeaders,
@@ -16,6 +17,13 @@ import { publicChatReadLimiter } from "../config/rate-limit.js";
  * - GET /c/:token                      → página SSR con OpenGraph
  */
 export const publicChannelApiRouter = Router();
+
+publicChannelApiRouter.get(
+  "/by-tenant/:tenantId",
+  webchatSecurityHeaders({ publicCors: true }),
+  publicChatReadLimiter,
+  getPublicTokenByTenantController,
+);
 
 publicChannelApiRouter.get(
   "/:token",
