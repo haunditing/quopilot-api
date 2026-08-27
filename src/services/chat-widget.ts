@@ -1,70 +1,75 @@
 // src/services/chat-widget.ts (quopilot-api)
-
-/**
- * Widget de chat comercial servido desde la API (certificado válido vía el
- * dominio público). Es un "bridge" funcional: expone
- * `window.QuoPilotChat.open({ planContext, tenantId })` y
- * `window.QuoPilotChat.selectPlan(planKey)`. Cuando el CDN interno real
- * (`cdn-internal.quopilot.com`) tenga certificado válido, basta con apuntar
- * `NEXT_PUBLIC_CHAT_WIDGET_URL` a ese CDN — el contrato es el mismo.
- */
+// Sirve el MISMO widget que cdn.quopilot.com/v1/widget.js pero desde un dominio con certificado válido.
+// Usa el iframe hacia /c/:token donde renderiza PublicChat (mismo componente que WebChat público).
+// Contrato idéntico a quopilot-web/src/widget/widget.ts para que landing y tenants usen el mismo flow.
 export const CHAT_WIDGET_JS = `
 (function () {
-  var state = { plan: null, tenant: null };
-  var host = document.createElement('div');
-  host.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:99999;font-family:system-ui,sans-serif;';
-  host.innerHTML =
-    '<button id="qp-wg-btn" style="display:inline-flex;align-items:center;gap:8px;background:#6366f1;color:#fff;border:0;border-radius:9999px;padding:12px 18px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 8px 24px rgba(99,102,241,.4)">Cotizar con Asesor IA</button>' +
-    '<div id="qp-wg-panel" style="display:none;position:absolute;bottom:72px;right:0;width:320px;max-width:90vw;background:#fff;color:#0f172a;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(15,23,42,.25);flex-direction:column">' +
-      '<div style="background:linear-gradient(135deg,#6366f1,#818cf8);color:#fff;padding:14px 16px;font-weight:700;font-size:14px">Asistente de Ventas IA</div>' +
-      '<div id="qp-wg-ctx" style="padding:8px 16px;font-size:12px;color:#475569;border-bottom:1px solid #e2e8f0"></div>' +
-      '<div id="qp-wg-msgs" style="padding:12px 16px;height:200px;overflow-y:auto;display:flex;flex-direction:column"></div>' +
-      '<input id="qp-wg-in" placeholder="Escribe tu mensaje…" style="margin:12px 16px 16px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:13px;outline:none" />' +
-    '</div>';
-  document.body.appendChild(host);
-
-  var btn = host.querySelector('#qp-wg-btn');
-  var panel = host.querySelector('#qp-wg-panel');
-  var ctx = host.querySelector('#qp-wg-ctx');
-  var msgs = host.querySelector('#qp-wg-msgs');
-  var inp = host.querySelector('#qp-wg-in');
-
-  function say(text, me) {
-    var d = document.createElement('div');
-    d.textContent = text;
-    d.style.cssText = 'margin:6px 0;padding:8px 11px;border-radius:10px;font-size:13px;max-width:85%;line-height:1.4;' + (me ? 'align-self:flex-end;background:#6366f1;color:#fff;' : 'align-self:flex-start;background:#f1f5f9;color:#0f172a;');
-    msgs.appendChild(d);
-    msgs.scrollTop = msgs.scrollHeight;
+  "use strict";
+  if (window.__QUOPILOT_WIDGET__) return;
+  Object.defineProperty(window, "__QUOPILOT_WIDGET__", { value: true });
+  var currentScript = document.currentScript;
+  var token = currentScript && currentScript.dataset ? currentScript.dataset.quopilotToken : "";
+  var TOKEN_PATTERN = /^qp_live_[a-f0-9]{32}$/;
+  if (!TOKEN_PATTERN.test(token)) {
+    console.error("[QuoPilot] data-quopilot-token inválido o ausente. Se esperaba el formato qp_live_xxx entregado por el panel.");
+    return;
   }
-
-  function openChat() {
-    panel.style.display = 'flex';
-    ctx.textContent = 'Plan: ' + (state.plan || 'general') + (state.tenant ? ' · Empresa: ' + state.tenant : '');
-    if (!msgs.children.length) {
-      say('Hola 👋 Soy el asesor comercial de QuoPilot.');
-      if (state.plan) say('Veo que te interesa el plan ' + state.plan + '. ¿Te ayudo a cotizarlo a tu medida?');
-    }
-    inp.focus();
+  function normalizeOrigin(raw) {
+    if (!raw) return null;
+    try { return new URL(raw).origin; } catch (e) { console.error("[QuoPilot] data-quopilot-origin inválido:", raw); return null; }
   }
-
-  btn.addEventListener('click', openChat);
-  inp.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' && inp.value.trim()) {
-      say(inp.value.trim(), true);
-      inp.value = '';
-      setTimeout(function () { say('¡Gracias! Un asesor te contactará según el plan ' + (state.plan || 'elegido') + '.'); }, 500);
-    }
+  var APP_ORIGIN = normalizeOrigin(currentScript && currentScript.dataset ? currentScript.dataset.quopilotOrigin : null) || "https://app.quopilot.com";
+  var POSITION = currentScript && currentScript.dataset && currentScript.dataset.quopilotPosition === "bottom-left" ? "left" : "right";
+  var TRUSTED_ORIGIN = APP_ORIGIN;
+  var SIDE = POSITION;
+  var css = ".qp-widget-fab{position:fixed;" + SIDE + ":20px;bottom:20px;width:60px;height:60px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg, var(--accent, #aa3bff), #7e22ce);box-shadow:0 4px 16px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;padding:0;transition:transform 0.15s ease,box-shadow 0.15s ease;z-index:2147483000}.qp-widget-fab:hover{transform:scale(1.06);box-shadow:0 6px 24px rgba(0,0,0,0.35)}.qp-widget-fab svg{width:30px;height:30px;fill:#ffffff}.qp-widget-frame{position:fixed;" + SIDE + ":20px;bottom:92px;width:380px;height:min(600px, calc(100vh - 120px));max-width:calc(100vw - 32px);max-height:calc(100vh - 112px);border:none;border-radius:16px;background:transparent;box-shadow:0 12px 40px rgba(0,0,0,0.28);overflow:hidden;opacity:0;transform:translateY(16px) scale(0.98);pointer-events:none;transition:opacity 0.2s ease,transform 0.2s ease;z-index:2147483001}.qp-widget-frame--visible{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}@media (max-width:480px){.qp-widget-frame{inset:0;width:100vw;height:100vh;max-width:none;max-height:none;border-radius:0}}";
+  var styleEl = document.createElement("style");
+  styleEl.textContent = css;
+  document.head.appendChild(styleEl);
+  var frameUrl = APP_ORIGIN.replace(/\\/$/, "") + "/c/" + encodeURIComponent(token);
+  var frame = document.createElement("iframe");
+  frame.className = "qp-widget-frame";
+  frame.src = frameUrl;
+  frame.title = "Chat en línea";
+  frame.allow = "microphone; clipboard-write";
+  frame.setAttribute("aria-hidden", "true");
+  var fab = document.createElement("button");
+  fab.type = "button";
+  fab.className = "qp-widget-fab";
+  fab.setAttribute("aria-label", "Abrir chat de asistencia");
+  fab.setAttribute("aria-expanded", "false");
+  fab.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C7.03 3 3 6.58 3 11c0 2.09.9 3.99 2.38 5.42-.13 1.05-.56 2.36-1.62 3.33a.6.6 0 0 0 .42 1.04c1.94-.08 3.53-.75 4.65-1.49 1 .29 2.06.45 3.17.45 4.97 0 9-3.58 9-8s-4.03-8-9-8z"/></svg>';
+  var isOpen = false;
+  function setOpen(next) {
+    isOpen = next;
+    frame.classList.toggle("qp-widget-frame--visible", isOpen);
+    frame.setAttribute("aria-hidden", String(!isOpen));
+    fab.setAttribute("aria-expanded", String(isOpen));
+    fab.setAttribute("aria-label", isOpen ? "Cerrar chat de asistencia" : "Abrir chat de asistencia");
+    if (frame.contentWindow) frame.contentWindow.postMessage({ type: "quopilot:visibility", visible: isOpen }, TRUSTED_ORIGIN);
+  }
+  fab.addEventListener("click", function () { setOpen(!isOpen); });
+  window.addEventListener("message", function (event) {
+    if (event.origin !== TRUSTED_ORIGIN) return;
+    if (event.source && event.source !== frame.contentWindow) return;
+    var type = event.data && event.data.type;
+    if (type === "quopilot:close") setOpen(false);
+    if (type === "quopilot:open") setOpen(true);
   });
-
+  var planContext = null;
+  function iframeUrlWithPlan() { return planContext ? frameUrl + "?plan=" + encodeURIComponent(planContext) : frameUrl; }
+  function applyPlan(planKey) { planContext = planKey; frame.src = iframeUrlWithPlan(); }
   window.QuoPilotChat = {
-    selectPlan: function (planKey) { state.plan = planKey; },
-    open: function (payload) {
-      if (payload) {
-        if (payload.planContext) state.plan = payload.planContext;
-        if (payload.tenantId) state.tenant = payload.tenantId;
-      }
-      openChat();
-    }
+    selectPlan: function (planKey) { applyPlan(planKey); },
+    open: function (opts) {
+      var plan = opts && (opts.plan || opts.planContext);
+      if (plan) applyPlan(plan);
+      setOpen(true);
+    },
+    close: function () { setOpen(false); }
   };
+  function mount() { document.body.appendChild(frame); document.body.appendChild(fab); }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount, { once: true });
+  else mount();
 })();
 `;
