@@ -4,6 +4,8 @@ export interface IBranding extends Document {
   /** Destino de la marca: app web o landing. */
   target: "app" | "landing";
   logoUrl?: string;
+  /** Logo con nombre (imagotipo) para sidebar desplegada. */
+  logoWithNameUrl?: string;
   faviconUrl?: string;
   assistantImageUrl?: string;
   primaryColor?: string;
@@ -25,6 +27,10 @@ const brandingSchema = new Schema<IBranding>(
     },
 
     logoUrl: {
+      type: String,
+    },
+
+    logoWithNameUrl: {
       type: String,
     },
 

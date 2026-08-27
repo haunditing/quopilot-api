@@ -5,6 +5,7 @@ export type BrandingTarget = "app" | "landing";
 
 export type PublicBranding = {
   logoUrl?: string | null;
+  logoWithNameUrl?: string | null;
   faviconUrl?: string | null;
   assistantImageUrl?: string | null;
   primaryColor?: string | null;
@@ -15,6 +16,7 @@ export type PublicBranding = {
 
 function toPublicBranding(doc: {
   logoUrl?: string;
+  logoWithNameUrl?: string;
   faviconUrl?: string;
   assistantImageUrl?: string;
   primaryColor?: string;
@@ -24,6 +26,7 @@ function toPublicBranding(doc: {
 }): PublicBranding {
   return {
     logoUrl: doc.logoUrl ?? null,
+    logoWithNameUrl: doc.logoWithNameUrl ?? null,
     faviconUrl: doc.faviconUrl ?? null,
     assistantImageUrl: doc.assistantImageUrl ?? null,
     primaryColor: doc.primaryColor ?? null,
