@@ -26,7 +26,7 @@ const TOKEN_RANDOM_BYTES = 16;
 export class PublicChannelService {
   /** URL base de producción para enlaces standalone (redes sociales). */
   readonly appBaseUrl: string =
-    process.env.APP_BASE_URL ?? "https://www.quopilot.com";
+    process.env.APP_BASE_URL ?? "https://app.quopilot.com";
 
   /** URL base del CDN donde se sirve el widget.js. */
   readonly cdnBaseUrl: string =
@@ -193,7 +193,7 @@ export class PublicChannelService {
   /** Snippet HTML `<script>` para embeber en sitios web de terceros. */
   getEmbedScript(token: string): string {
     const cdn = this.cdnBaseUrl.replace(/\/$/, "");
-    return `<script src="${cdn}/v1/widget.js" data-quopilot-token="${token}" async></script>`;
+    return `<script src="${cdn}/widget.js" data-quopilot-token="${token}" async></script>`;
   }
 
   /**
