@@ -8,6 +8,7 @@ export type PublicBranding = {
   logoWithNameUrl?: string | null;
   faviconUrl?: string | null;
   assistantImageUrl?: string | null;
+  defaultAgentImageUrl?: string | null;
   primaryColor?: string | null;
   secondaryColor?: string | null;
   brandName?: string | null;
@@ -19,6 +20,7 @@ function toPublicBranding(doc: {
   logoWithNameUrl?: string;
   faviconUrl?: string;
   assistantImageUrl?: string;
+  defaultAgentImageUrl?: string;
   primaryColor?: string;
   secondaryColor?: string;
   brandName?: string;
@@ -29,6 +31,7 @@ function toPublicBranding(doc: {
     logoWithNameUrl: doc.logoWithNameUrl ?? null,
     faviconUrl: doc.faviconUrl ?? null,
     assistantImageUrl: doc.assistantImageUrl ?? null,
+    defaultAgentImageUrl: doc.defaultAgentImageUrl ?? null,
     primaryColor: doc.primaryColor ?? null,
     secondaryColor: doc.secondaryColor ?? null,
     brandName: doc.brandName ?? null,

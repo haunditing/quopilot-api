@@ -31,6 +31,7 @@ export const updateBrandingSchema = z.object({
   logoWithNameUrl: imageReference,
   faviconUrl: imageReference,
   assistantImageUrl: imageReference,
+  defaultAgentImageUrl: imageReference,
   primaryColor: optionalColor,
   secondaryColor: optionalColor,
   brandName: z.string().trim().max(80).optional().nullable(),

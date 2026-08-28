@@ -30,6 +30,14 @@ function handleAgentError(
     return;
   }
 
+  if (message.includes("Plan Pro requerido")) {
+    res.status(403).json({
+      message,
+    });
+
+    return;
+  }
+
   console.error(error);
 
   res.status(500).json({

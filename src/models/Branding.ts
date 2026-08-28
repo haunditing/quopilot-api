@@ -8,6 +8,8 @@ export interface IBranding extends Document {
   logoWithNameUrl?: string;
   faviconUrl?: string;
   assistantImageUrl?: string;
+  /** Imagen por defecto del agente comercial (usada si el tenant no tiene custom o no es PRO). */
+  defaultAgentImageUrl?: string;
   primaryColor?: string;
   secondaryColor?: string;
   brandName?: string;
@@ -35,6 +37,10 @@ const brandingSchema = new Schema<IBranding>(
     },
 
     faviconUrl: {
+      type: String,
+    },
+
+    defaultAgentImageUrl: {
       type: String,
     },
 

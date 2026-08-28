@@ -3,6 +3,8 @@ import { WebhookDispatcherService } from "./webhook-dispatcher-service.js";
 import { Agent } from "../models/Agent.js";
 import { Customer } from "../models/Customer.js";
 import { Message } from "../models/Message.js";
+import { Branding } from "../models/Branding.js";
+import { Subscription } from "../models/Subscription.js";
 import { Tenant } from "../models/Tenant.js";
 import {
   addMessage,
@@ -44,6 +46,18 @@ function sanitizeContent(content: string): string {
     .trim();
 }
 
+const ALLOWED_AVATAR_PLANS = new Set(["PRO", "ENTERPRISE"]);
+
+async function canCustomizeAvatar(tenantId: string): Promise<boolean> {
+  const tenant = await Tenant.findById(tenantId).select("plan").lean();
+  const tenantPlan = tenant?.plan?.toUpperCase() ?? "FREE";
+  if (ALLOWED_AVATAR_PLANS.has(tenantPlan)) return true;
+  const sub = await Subscription.findOne({ tenantId: new Types.ObjectId(tenantId) }).select("planKey").lean();
+  const subPlan = sub?.planKey?.toUpperCase();
+  if (subPlan && ALLOWED_AVATAR_PLANS.has(subPlan)) return true;
+  return false;
+}
+
 async function seedGreetingMessage(input: {
   tenantId: string;
   conversationId: string;
@@ -81,40 +95,64 @@ export async function getPublicChatConfig(tenantId: string) {
 
   const channel = await getActiveChannelByType(tenantId, "WEB_CHAT");
 
-  // Resolución dinámica del nombre del agente: widget.agentName → Agent.name → fallback
+  // Resolución dinámica del nombre e imagen del agente: widget.agentName → Agent.name → fallback
   let agentName: string | undefined;
+  let agentImage: string | undefined;
   let companyName: string | undefined;
+  let agentDoc: { name?: string; avatarData?: string } | null = null;
+
+  const canCustomize = await canCustomizeAvatar(tenantId);
+
+  let defaultAgentImage: string | undefined;
+  try {
+    const branding = await Branding.findOne({ target: "app" }).select("defaultAgentImageUrl").lean();
+    if (branding?.defaultAgentImageUrl?.trim()) defaultAgentImage = branding.defaultAgentImageUrl.trim();
+  } catch {
+    // silencioso
+  }
+
+  async function loadAgent(): Promise<{ name?: string; avatarData?: string } | null> {
+    if (agentDoc) return agentDoc;
+    try {
+      if (channel?.agentId) {
+        const found = await Agent.findOne({
+          _id: channel.agentId,
+          tenantId: new Types.ObjectId(tenantId),
+        }).lean();
+        if (found) {
+          agentDoc = { name: found.name, avatarData: found.avatarData };
+          return agentDoc;
+        }
+      }
+      const active = await Agent.findOne({
+        tenantId: new Types.ObjectId(tenantId),
+        status: "ACTIVE",
+      }).lean();
+      if (active) {
+        agentDoc = { name: active.name, avatarData: active.avatarData };
+        return agentDoc;
+      }
+    } catch {
+      // silencioso
+    }
+    return null;
+  }
 
   if (channel) {
     const rawWidget = getChannelWidgetConfig(channel);
     agentName = rawWidget?.agentName?.trim() || undefined;
     companyName = rawWidget?.companyName?.trim() || undefined;
 
-    // Si el widget no trae agentName, buscar el agente vinculado al canal o el activo del tenant
     if (!agentName) {
-      try {
-        let doc: { name?: string } | null = null;
-        if (channel.agentId) {
-          const found = await Agent.findOne({
-            _id: channel.agentId,
-            tenantId: new Types.ObjectId(tenantId),
-          }).lean();
-          if (found?.name) doc = { name: found.name };
-        }
-        if (!doc) {
-          const active = await Agent.findOne({
-            tenantId: new Types.ObjectId(tenantId),
-            status: "ACTIVE",
-          }).lean();
-          if (active?.name) doc = { name: active.name };
-        }
-        if (doc?.name?.trim()) agentName = doc.name.trim();
-      } catch {
-        // silencioso: deja agentName sin resolver
-      }
+      const doc = await loadAgent();
+      if (doc?.name?.trim()) agentName = doc.name.trim();
     }
 
-    // Enriquecer widget con valores resueltos para el frontend
+    const docForImage = await loadAgent();
+    if (canCustomize && docForImage?.avatarData?.trim()) {
+      agentImage = docForImage.avatarData.trim();
+    }
+
     const widget = rawWidget
       ? {
           ...rawWidget,
@@ -128,17 +166,17 @@ export async function getPublicChatConfig(tenantId: string) {
       tenantName: tenant.name,
       channelName: channel.name,
       agentName,
+      agentImage,
+      defaultAgentImage,
       widget,
     };
   }
 
   // Sin canal: intenta resolver solo por agente activo
   try {
-    const agentDoc = await Agent.findOne({
-      tenantId: new Types.ObjectId(tenantId),
-      status: "ACTIVE",
-    }).lean();
-    if (agentDoc?.name?.trim()) agentName = agentDoc.name.trim();
+    const doc = await loadAgent();
+    if (doc?.name?.trim()) agentName = doc.name.trim();
+    if (canCustomize && doc?.avatarData?.trim()) agentImage = doc.avatarData.trim();
   } catch {
     // silencioso
   }
@@ -148,6 +186,8 @@ export async function getPublicChatConfig(tenantId: string) {
     tenantName: tenant.name,
     channelName: undefined,
     agentName,
+    agentImage,
+    defaultAgentImage,
     widget: undefined,
   };
 }

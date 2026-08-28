@@ -1,5 +1,7 @@
 import { Types } from "mongoose";
 import { Agent } from "../models/Agent.js";
+import { Tenant } from "../models/Tenant.js";
+import { Subscription } from "../models/Subscription.js";
 import type { UpdateAgentInput } from "../schemas/agent-schema.js";
 
 const DEFAULT_AGENT_NAME = "Asistente Comercial";
@@ -140,6 +142,20 @@ function buildUpdate(input: UpdateAgentInput): Record<string, unknown> {
   return update;
 }
 
+const ALLOWED_AVATAR_PLANS = new Set(["PRO", "ENTERPRISE"]);
+
+async function canCustomizeAvatar(tenantId: string): Promise<boolean> {
+  const tenant = await Tenant.findById(tenantId).select("plan").lean();
+  const tenantPlan = tenant?.plan?.toUpperCase() ?? "FREE";
+  if (ALLOWED_AVATAR_PLANS.has(tenantPlan)) return true;
+
+  const sub = await Subscription.findOne({ tenantId: new Types.ObjectId(tenantId) }).select("planKey").lean();
+  const subPlan = sub?.planKey?.toUpperCase();
+  if (subPlan && ALLOWED_AVATAR_PLANS.has(subPlan)) return true;
+
+  return false;
+}
+
 export async function getAgentByTenant(tenantId: string) {
   assertValidTenantId(tenantId);
 
@@ -172,6 +188,17 @@ export async function provisionAgent(tenantId: string) {
 
 export async function updateAgent(tenantId: string, input: UpdateAgentInput) {
   assertValidTenantId(tenantId);
+
+  if (
+    input.avatarData !== undefined &&
+    input.avatarData !== null &&
+    String(input.avatarData).trim() !== ""
+  ) {
+    const allowed = await canCustomizeAvatar(tenantId);
+    if (!allowed) {
+      throw new Error("Plan Pro requerido para personalizar imagen del agente");
+    }
+  }
 
   const update = buildUpdate(input);
 
